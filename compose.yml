@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  app:
+    image: 'golang:1.20'
+    ports:
+      - 8080:8080
+    volumes:
+      - .:/app
+    working_dir: /app
+    env_file:
+      - .env
+    command: 'sleep infinity'
+
+  db:
+    image: 'mysql:8.0'
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:
