@@ -5,15 +5,16 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 )
 
-type AuthCredentials struct {
+type authCredentials struct {
 	Username   string `json:"username"`
 	Password   string `json:"password"`
 	DeviceName string `json:"deviceName"`
 }
 
 func AddAuthRoutes(app *fiber.App, db *Database) {
+
 	app.Post("/auth/login", func(c *fiber.Ctx) error {
-		var authCredentials AuthCredentials
+		var authCredentials authCredentials
 		err := c.BodyParser(&authCredentials)
 		log.Debugf("%#v", authCredentials)
 		if err != nil {
@@ -51,7 +52,7 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 	})
 
 	app.Post("/auth/register", func(c *fiber.Ctx) error {
-		var authCredentials AuthCredentials
+		var authCredentials authCredentials
 		err := c.BodyParser(&authCredentials)
 		log.Debugf("%#v", authCredentials)
 		if err != nil {
@@ -85,5 +86,26 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 		}
 		_ = db.DeleteSession(sessionStr.Session)
 		return c.SendStatus(fiber.StatusOK)
+	})
+
+	app.Post("/auth/renew", func(c *fiber.Ctx) error {
+		var oldSessionStr IncludeSessionString
+		err := c.BodyParser(&oldSessionStr)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		session, err := db.GetSession(oldSessionStr.Session)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		newSessionInfo, err := db.CreateSession(session.UserID, session.DeviceName)
+		if err != nil {
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+
+		_ = db.DeleteSession(oldSessionStr.Session)
+		return c.JSON(newSessionInfo)
 	})
 }
