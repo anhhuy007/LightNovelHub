@@ -29,7 +29,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer log.Error(db.Close())
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
@@ -42,7 +42,7 @@ func main() {
 	authMiddleware := middleware.AuthenticationCheck(&database)
 	app.Use(authMiddleware)
 
-	app.All("/", func(c *fiber.Ctx) error {
+	app.All("/ok", func(c *fiber.Ctx) error {
 		log.Debug(c.Locals(middleware.KeyIsUserAuth))
 		return c.SendString("Hello, World 👋!")
 	})
