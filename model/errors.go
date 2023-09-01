@@ -1,8 +1,4 @@
-package main
-
-type ErrorMessage struct {
-	Error string `json:"error"`
-}
+package model
 
 type Error string
 
@@ -17,5 +13,6 @@ const (
 	ErrUserAlreadyExist = Error("User already exist")
 	ErrUserNotFound     = Error("User not found")
 	ErrSessionExpired   = Error("Session expired")
-	ErrInternal         = Error("Internal")
+	ErrNovelNotFound    = Error("Novel not found")
+	ErrInternal         = Error("Internal server error")
 )

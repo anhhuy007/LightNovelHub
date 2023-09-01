@@ -1,0 +1,2 @@
+- Logging from data layer only
+- When use context, remember to check if the error is context.Canceled

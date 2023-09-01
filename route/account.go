@@ -1,6 +1,9 @@
-package main
+package route
 
 import (
+	"Lightnovel/model"
+	"Lightnovel/utils"
+	"errors"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 )
@@ -11,9 +14,10 @@ type authCredentials struct {
 	DeviceName string `json:"deviceName"`
 }
 
-func AddAuthRoutes(app *fiber.App, db *Database) {
+func AddAccountRoutes(router *fiber.Router, db model.DB) {
+	accountRoute := (*router).Group("/account")
 
-	app.Post("/auth/login", func(c *fiber.Ctx) error {
+	accountRoute.Post("/login", func(c *fiber.Ctx) error {
 		var authCredentials authCredentials
 		err := c.BodyParser(&authCredentials)
 		log.Debugf("%#v", authCredentials)
@@ -23,21 +27,17 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 
 		user, err := db.GetUser(authCredentials.Username)
 		// Do the hash comparison anyway to prevent timing attacks
-		if err == ErrUserNotFound {
-			passwordVerify(authCredentials.Password, []byte{})
-			return c.Status(fiber.StatusNotFound).JSON(ErrorMessage{
-				err.Error(),
-			})
+		if errors.Is(err, model.ErrUserNotFound) {
+			utils.PasswordVerify(authCredentials.Password, []byte{})
+			return c.SendStatus(fiber.StatusNotFound)
 		} else if err != nil {
 			log.Error(err)
-			passwordVerify(authCredentials.Password, []byte{})
+			utils.PasswordVerify(authCredentials.Password, []byte{})
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		if !passwordVerify(authCredentials.Password, user.Password) {
-			return c.Status(fiber.StatusNotFound).JSON(ErrorMessage{
-				ErrWrongPassword.Error(),
-			})
+		if !utils.PasswordVerify(authCredentials.Password, user.Password) {
+			return c.SendStatus(fiber.StatusNotFound)
 		}
 		sessionInfo, err := db.CreateSession(
 			user.ID,
@@ -51,7 +51,7 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 		return c.JSON(sessionInfo)
 	})
 
-	app.Post("/auth/register", func(c *fiber.Ctx) error {
+	accountRoute.Post("/register", func(c *fiber.Ctx) error {
 		var authCredentials authCredentials
 		err := c.BodyParser(&authCredentials)
 		log.Debugf("%#v", authCredentials)
@@ -63,10 +63,8 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 			authCredentials.Username,
 			authCredentials.Password,
 		)
-		if err == ErrInvalidPassword || err == ErrUserAlreadyExist {
-			return c.Status(fiber.StatusBadRequest).JSON(ErrorMessage{
-				err.Error(),
-			})
+		if errors.Is(err, model.ErrInvalidPassword) || errors.Is(err, model.ErrUserAlreadyExist) {
+			return c.SendStatus(fiber.StatusBadRequest)
 		} else if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -78,8 +76,8 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 		return c.JSON(sessionInfo)
 	})
 
-	app.Post("/auth/logout", func(c *fiber.Ctx) error {
-		var sessionStr IncludeSessionString
+	accountRoute.Post("/logout", func(c *fiber.Ctx) error {
+		var sessionStr model.IncludeSessionString
 		err := c.BodyParser(&sessionStr)
 		if err != nil {
 			return c.SendStatus(fiber.StatusBadRequest)
@@ -88,8 +86,8 @@ func AddAuthRoutes(app *fiber.App, db *Database) {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	app.Post("/auth/renew", func(c *fiber.Ctx) error {
-		var oldSessionStr IncludeSessionString
+	accountRoute.Post("/renew", func(c *fiber.Ctx) error {
+		var oldSessionStr model.IncludeSessionString
 		err := c.BodyParser(&oldSessionStr)
 		if err != nil {
 			return c.SendStatus(fiber.StatusBadRequest)

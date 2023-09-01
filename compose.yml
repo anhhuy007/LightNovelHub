@@ -9,14 +9,14 @@ services:
       - .:/app
     working_dir: /app
     env_file:
-      - .env
+      - test.env
     command: 'sleep infinity'
 
   db:
     image: 'mysql:8.0'
     restart: unless-stopped
     env_file:
-      - .env
+      - test.env
     ports:
       - 3306:3306
     volumes:

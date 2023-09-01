@@ -1,4 +1,4 @@
-package db
+package model
 
 import (
 	"database/sql"
@@ -6,12 +6,13 @@ import (
 )
 
 type User struct {
-	ID        []byte         `json:"id"`
-	Username  string         `json:"username"`
-	Password  []byte         `json:"password"`
-	Email     sql.NullString `json:"email"`
-	Image     sql.NullString `json:"image"`
-	CreatedAt time.Time      `json:"created"  db:"created_at"`
+	ID          []byte         `json:"id"`
+	Username    string         `json:"username"`
+	Displayname string         `json:"displayName"`
+	Password    []byte         `json:"password"`
+	Email       sql.NullString `json:"email"`
+	Image       string         `json:"image"`
+	CreatedAt   time.Time      `json:"created_at"  db:"created_at"`
 }
 
 type Novel_status struct {
@@ -26,6 +27,7 @@ type Novel struct {
 	Description string    `json:"description"`
 	Author      []byte    `json:"author"`
 	Image       string    `json:"image"`
+	Language    string    `json:"language"`
 	CreateAt    time.Time `json:"createAt"    db:"created_at"`
 	UpdateAt    time.Time `json:"updateAt"    db:"updated_at"`
 	TotalRating int       `json:"totalRating" db:"total_rating"`
@@ -33,10 +35,11 @@ type Novel struct {
 	Views       int       `json:"views"`
 	Clicks      int       `json:"clicks"`
 	Adult       bool      `json:"adult"`
-	StatusID    int       `json:"statusId"    db:"status_id"`
+	StatusID    int       `json:"statusID"    db:"status_id"`
+	Visibility  int       `json:"visibility"`
 }
 
-type Tags struct {
+type Tag struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
@@ -58,18 +61,18 @@ type Volume struct {
 	CreateAt    time.Time `json:"createAt"    db:"created_at"`
 	UpdateAt    time.Time `json:"updateAt"    db:"updated_at"`
 	Views       int       `json:"views"`
-	Clicks      int       `json:"clicks"`
+	Visibility  int       `json:"visibility"`
 }
 
 type Chapter struct {
-	ID       []byte    `json:"id"`
-	VolumeID []byte    `json:"volumeId" db:"volume_id"`
-	Title    string    `json:"title"`
-	Content  string    `json:"content"`
-	CreateAt time.Time `json:"createAt" db:"created_at"`
-	UpdateAt time.Time `json:"updateAt" db:"updated_at"`
-	Views    int       `json:"views"`
-	Clicks   int       `json:"clicks"`
+	ID         []byte    `json:"id"`
+	VolumeID   []byte    `json:"volumeId"   db:"volume_id"`
+	Title      string    `json:"title"`
+	Content    string    `json:"content"`
+	CreateAt   time.Time `json:"createAt"   db:"created_at"`
+	UpdateAt   time.Time `json:"updateAt"   db:"updated_at"`
+	Views      int       `json:"views"`
+	Visibility int       `json:"visibility"`
 }
 
 type Comment struct {
@@ -85,7 +88,7 @@ type Image struct {
 	ID       int       `json:"id"`
 	UserID   []byte    `json:"userId"   db:"user_id"`
 	NovelID  []byte    `json:"novelId"  db:"novel_id"`
-	url      string    `json:"url"`
+	Url      string    `json:"url"`
 	CreateAt time.Time `json:"createAt" db:"created_at"`
 }
 
