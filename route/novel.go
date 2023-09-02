@@ -10,13 +10,32 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 )
 
+type createNovelResult struct {
+	NovelID string `json:"novel_id"`
+}
+
 func AddUploadRoutes(router *fiber.Router, db model.DB) {
 	novelRoute := (*router).Group("/novel")
 
-	type CreateNovelResult struct {
-		NovelID string `json:"novel_id"`
-	}
-	novelRoute.Post("/create", func(c *fiber.Ctx) error {
+	novelRoute.Post("/create", createNovel(db))
+
+	novelRoute.Get("/:novelID", getNovel(db))
+}
+
+// Create Novel
+//
+//	@Summary	Create a new novel, return the created novel id
+//	@Tags		novel
+//	@Accept		json
+//	@Produce	json
+//	@Param		NovelDetails	body		model.CreateNovelArgs	true	"Novel details"
+//	@Success	200				{object}	createNovelResult
+//	@Failure	400
+//	@Failure	401
+//	@Failure	500
+//	@Router		/novel/create [POST]
+func createNovel(db model.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
 		if c.Locals(middleware.KeyIsUserAuth) == false {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
@@ -37,12 +56,26 @@ func AddUploadRoutes(router *fiber.Router, db model.DB) {
 		}
 
 		return c.Status(fiber.StatusCreated).JSON(
-			CreateNovelResult{
+			createNovelResult{
 				NovelID: hex.EncodeToString(uid),
 			})
-	})
+	}
+}
 
-	novelRoute.Get("/:novelID", func(c *fiber.Ctx) error {
+// Get Novel
+//
+//	@Summary		Get the novel with provided novel id
+//	@Description	If the novel is private, the user need to be logged in with the author account
+//	@Tags			novel
+//	@Produce		json
+//	@Param			NovelID	path		string	true	"Novel ID"
+//	@Success		200		{object}	model.NovelView
+//	@Failure		400
+//	@Failure		401
+//	@Failure		500
+//	@Router			/novel/:NovelID [GET]
+func getNovel(db model.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
 		novelID := c.Params("novelID")
 		if len(novelID) != 32 {
 			return c.SendStatus(fiber.StatusNotFound)
@@ -78,5 +111,5 @@ func AddUploadRoutes(router *fiber.Router, db model.DB) {
 
 		// Everything is good
 		return c.JSON(novelView)
-	})
+	}
 }

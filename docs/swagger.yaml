@@ -1,0 +1,263 @@
+basePath: /api/v1
+definitions:
+  model.CreateNovelArgs:
+    properties:
+      author:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      image:
+        type: string
+      language:
+        type: string
+      tagline:
+        type: string
+      title:
+        type: string
+    type: object
+  model.IncludeSessionString:
+    properties:
+      session:
+        type: string
+    type: object
+  model.NovelView:
+    properties:
+      adult:
+        type: boolean
+      author:
+        $ref: '#/definitions/model.UserView'
+      clicks:
+        type: integer
+      createAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      image:
+        type: string
+      language:
+        type: string
+      rateCount:
+        type: integer
+      status:
+        type: string
+      tagline:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/model.TagView'
+        type: array
+      title:
+        type: string
+      totalRating:
+        type: integer
+      updateAt:
+        type: string
+      views:
+        type: integer
+      visibility:
+        type: string
+      volumes:
+        type: integer
+    type: object
+  model.SessionInfo:
+    properties:
+      expired_at:
+        type: string
+      session:
+        type: string
+    type: object
+  model.TagView:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  model.UserView:
+    properties:
+      created_at:
+        type: string
+      displayName:
+        type: string
+      id:
+        items:
+          type: integer
+        type: array
+      image:
+        type: string
+      username:
+        type: string
+    type: object
+  route.authCredentials:
+    properties:
+      deviceName:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  route.createNovelResult:
+    properties:
+      novel_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Light novel API
+  version: "1.0"
+paths:
+  /accounts/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User credentials
+        in: body
+        name: credential
+        required: true
+        schema:
+          $ref: '#/definitions/route.authCredentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SessionInfo'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Log the user in, return a new user session
+      tags:
+      - accounts
+  /accounts/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User credentials
+        in: body
+        name: credential
+        required: true
+        schema:
+          $ref: '#/definitions/model.IncludeSessionString'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Log the user out
+      tags:
+      - accounts
+  /accounts/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User credentials
+        in: body
+        name: credential
+        required: true
+        schema:
+          $ref: '#/definitions/route.authCredentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SessionInfo'
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Register the user, return a new user session
+      tags:
+      - accounts
+  /accounts/renew:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User credentials
+        in: body
+        name: credential
+        required: true
+        schema:
+          $ref: '#/definitions/model.IncludeSessionString'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SessionInfo'
+        "400":
+          description: Bad Request
+        "500":
+          description: Internal Server Error
+      summary: Renew the session token, the token should be renewed a week before
+        expires
+      tags:
+      - accounts
+  /novel/:NovelID:
+    get:
+      description: If the novel is private, the user need to be logged in with the
+        author account
+      parameters:
+      - description: Novel ID
+        in: path
+        name: NovelID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.NovelView'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Get the novel with provided novel id
+      tags:
+      - novel
+  /novel/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Novel details
+        in: body
+        name: NovelDetails
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateNovelArgs'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/route.createNovelResult'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal Server Error
+      summary: Create a new novel, return the created novel id
+      tags:
+      - novel
+swagger: "2.0"

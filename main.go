@@ -6,6 +6,7 @@ import (
 	"Lightnovel/route"
 	"context"
 	"github.com/go-sql-driver/mysql"
+	"github.com/gofiber/contrib/swagger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
@@ -13,8 +14,12 @@ import (
 	"time"
 )
 
+//	@title		Light novel API
+//	@version	1.0
+
+//	@host		localhost:8080
+//	@BasePath	/api/v1
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	mysqlConfig := mysql.Config{
 		User:      os.Getenv("MYSQL_USER"),
 		Passwd:    os.Getenv("MYSQL_PASSWORD"),
@@ -23,13 +28,19 @@ func main() {
 		DBName:    os.Getenv("MYSQL_DATABASE"),
 		ParseTime: true,
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	log.Debug(mysqlConfig.FormatDSN())
 	db, err := sqlx.ConnectContext(ctx, "mysql", mysqlConfig.FormatDSN())
 	cancel()
 	if err != nil {
 		panic(err)
 	}
-	defer log.Error(db.Close())
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
@@ -39,8 +50,15 @@ func main() {
 	database := model.NewDatabase(db, time.Minute)
 
 	app := fiber.New()
+
 	authMiddleware := middleware.AuthenticationCheck(&database)
 	app.Use(authMiddleware)
+
+	swagger := swagger.New(swagger.Config{
+		FilePath: "./docs/swagger.json",
+		BasePath: "/",
+	})
+	app.Use(swagger)
 
 	app.All("/ok", func(c *fiber.Ctx) error {
 		log.Debug(c.Locals(middleware.KeyIsUserAuth))

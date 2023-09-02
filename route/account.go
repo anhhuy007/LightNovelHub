@@ -15,9 +15,30 @@ type authCredentials struct {
 }
 
 func AddAccountRoutes(router *fiber.Router, db model.DB) {
-	accountRoute := (*router).Group("/account")
+	accountRoute := (*router).Group("/accounts")
 
-	accountRoute.Post("/login", func(c *fiber.Ctx) error {
+	accountRoute.Post("/login", login(db))
+
+	accountRoute.Post("/register", register(db))
+
+	accountRoute.Post("/logout", logout(db))
+
+	accountRoute.Post("/renew", renew(db))
+}
+
+// Login
+//
+//	@Summary	Log the user in, return a new user session
+//	@Tags		accounts
+//	@Accept		json
+//	@Produce	json
+//	@Param		credential	body		authCredentials	true	"User credentials"
+//	@Success	200			{object}	model.SessionInfo
+//	@Failure	404
+//	@Failure	500
+//	@Router		/accounts/login [POST]
+func login(db model.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
 		var authCredentials authCredentials
 		err := c.BodyParser(&authCredentials)
 		log.Debugf("%#v", authCredentials)
@@ -49,9 +70,22 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		return c.JSON(sessionInfo)
-	})
+	}
+}
 
-	accountRoute.Post("/register", func(c *fiber.Ctx) error {
+// Register
+//
+//	@Summary	Register the user, return a new user session
+//	@Tags		accounts
+//	@Accept		json
+//	@Produce	json
+//	@Param		credential	body		authCredentials	true	"User credentials"
+//	@Success	200			{object}	model.SessionInfo
+//	@Failure	404
+//	@Failure	500
+//	@Router		/accounts/register [POST]
+func register(db model.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
 		var authCredentials authCredentials
 		err := c.BodyParser(&authCredentials)
 		log.Debugf("%#v", authCredentials)
@@ -74,9 +108,20 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		return c.JSON(sessionInfo)
-	})
+	}
+}
 
-	accountRoute.Post("/logout", func(c *fiber.Ctx) error {
+// Logout
+//
+//	@Summary	Log the user out
+//	@Tags		accounts
+//	@Accept		json
+//	@Produce	json
+//	@Param		credential	body	model.IncludeSessionString	true	"User credentials"
+//	@Success	200
+//	@Router		/accounts/logout [POST]
+func logout(db model.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
 		var sessionStr model.IncludeSessionString
 		err := c.BodyParser(&sessionStr)
 		if err != nil {
@@ -84,9 +129,22 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 		}
 		_ = db.DeleteSession(sessionStr.Session)
 		return c.SendStatus(fiber.StatusOK)
-	})
+	}
+}
 
-	accountRoute.Post("/renew", func(c *fiber.Ctx) error {
+// Renew
+//
+//	@Summary	Renew the session token, the token should be renewed a week before expires
+//	@Tags		accounts
+//	@Accept		json
+//	@Produce	json
+//	@Param		credential	body		model.IncludeSessionString	true	"User credentials"
+//	@Success	200			{object}	model.SessionInfo
+//	@Failure	400
+//	@Failure	500
+//	@Router		/accounts/renew [POST]
+func renew(db model.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
 		var oldSessionStr model.IncludeSessionString
 		err := c.BodyParser(&oldSessionStr)
 		if err != nil {
@@ -105,5 +163,5 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 
 		_ = db.DeleteSession(oldSessionStr.Session)
 		return c.JSON(newSessionInfo)
-	})
+	}
 }
