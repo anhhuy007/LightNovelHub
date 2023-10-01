@@ -21,22 +21,22 @@ type Novel_status struct {
 }
 
 type Novel struct {
-	ID          []byte    `json:"id"`
-	Title       string    `json:"title"`
-	Tagline     string    `json:"tagline"`
-	Description string    `json:"description"`
-	Author      []byte    `json:"author"`
-	Image       string    `json:"image"`
-	Language    string    `json:"language"`
-	CreateAt    time.Time `json:"createAt"    db:"created_at"`
-	UpdateAt    time.Time `json:"updateAt"    db:"updated_at"`
-	TotalRating int       `json:"totalRating" db:"total_rating"`
-	RateCount   int       `json:"rateCount"   db:"rate_count"`
-	Views       int       `json:"views"`
-	Clicks      int       `json:"clicks"`
-	Adult       bool      `json:"adult"`
-	StatusID    int       `json:"statusID"    db:"status_id"`
-	Visibility  int       `json:"visibility"`
+	ID          []byte        `json:"id"`
+	Title       string        `json:"title"`
+	Tagline     string        `json:"tagline"`
+	Description string        `json:"description"`
+	Author      []byte        `json:"author"`
+	Image       string        `json:"image"`
+	Language    string        `json:"language"`
+	CreateAt    time.Time     `json:"createAt"    db:"created_at"`
+	UpdateAt    time.Time     `json:"updateAt"    db:"updated_at"`
+	TotalRating int           `json:"totalRating" db:"total_rating"`
+	RateCount   int           `json:"rateCount"   db:"rate_count"`
+	Views       int           `json:"views"`
+	Clicks      int           `json:"clicks"`
+	Adult       bool          `json:"adult"`
+	StatusID    NovelStatusID `json:"statusID"    db:"status_id"`
+	Visibility  VisibilityID  `json:"visibility"`
 }
 
 type Tag struct {
@@ -52,27 +52,27 @@ type Novel_tags struct {
 }
 
 type Volume struct {
-	ID          []byte    `json:"id"`
-	NovelID     []byte    `json:"novelId"     db:"novel_id"`
-	Title       string    `json:"title"`
-	Tagline     string    `json:"tagline"`
-	Description string    `json:"description"`
-	Image       string    `json:"image"`
-	CreateAt    time.Time `json:"createAt"    db:"created_at"`
-	UpdateAt    time.Time `json:"updateAt"    db:"updated_at"`
-	Views       int       `json:"views"`
-	Visibility  int       `json:"visibility"`
+	ID          []byte       `json:"id"`
+	NovelID     []byte       `json:"novelId"     db:"novel_id"`
+	Title       string       `json:"title"`
+	Tagline     string       `json:"tagline"`
+	Description string       `json:"description"`
+	Image       string       `json:"image"`
+	CreateAt    time.Time    `json:"createAt"    db:"created_at"`
+	UpdateAt    time.Time    `json:"updateAt"    db:"updated_at"`
+	Views       int          `json:"views"`
+	Visibility  VisibilityID `json:"visibility"`
 }
 
 type Chapter struct {
-	ID         []byte    `json:"id"`
-	VolumeID   []byte    `json:"volumeId"   db:"volume_id"`
-	Title      string    `json:"title"`
-	Content    string    `json:"content"`
-	CreateAt   time.Time `json:"createAt"   db:"created_at"`
-	UpdateAt   time.Time `json:"updateAt"   db:"updated_at"`
-	Views      int       `json:"views"`
-	Visibility int       `json:"visibility"`
+	ID         []byte       `json:"id"`
+	VolumeID   []byte       `json:"volumeId"   db:"volume_id"`
+	Title      string       `json:"title"`
+	Content    string       `json:"content"`
+	CreateAt   time.Time    `json:"createAt"   db:"created_at"`
+	UpdateAt   time.Time    `json:"updateAt"   db:"updated_at"`
+	Views      int          `json:"views"`
+	Visibility VisibilityID `json:"visibility"`
 }
 
 type Comment struct {

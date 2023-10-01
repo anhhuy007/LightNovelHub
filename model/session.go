@@ -3,7 +3,6 @@ package model
 import (
 	"Lightnovel/utils"
 	"context"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"github.com/gofiber/fiber/v2/log"
@@ -24,7 +23,7 @@ type IncludeSessionString struct {
 func (db *Database) CreateSession(
 	userID []byte,
 	deviceName string,
-) (SessionInfo, error) {
+) (SessionInfo, bool) {
 	sessionID := utils.GetUUID()
 	expires := time.Now().Add(sessionDuration)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -39,12 +38,12 @@ func (db *Database) CreateSession(
 	cancel()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Error(err)
-		return SessionInfo{}, ErrInternal
+		return SessionInfo{}, false
 	}
-	return SessionInfo{hex.EncodeToString(sessionID), expires}, nil
+	return SessionInfo{hex.EncodeToString(sessionID), expires}, true
 }
 
-func (db *Database) GetSession(sessionID string) (Session, error) {
+func (db *Database) GetSession(sessionID string) (Session, bool) {
 	var session Session
 	sessionIDByte := utils.Unhex(sessionID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -57,40 +56,33 @@ func (db *Database) GetSession(sessionID string) (Session, error) {
 	)
 	cancel()
 
-	if errors.Is(err, sql.ErrNoRows) {
-		return Session{}, ErrSessionExpired
-	} else if err != nil && !errors.Is(err, context.Canceled) {
-		log.Error(err)
-		return Session{}, ErrInternal
-	}
-	if time.Now().After(session.ExpireAt) {
-		_ = db.DeleteSession(sessionID)
-		return Session{}, ErrSessionExpired
+	if err != nil {
+		return Session{}, false
 	}
 
-	if session.ExpireAt.Sub(time.Now()) < time.Hour*24*7 {
+	if session.ExpireAt.Sub(time.Now()) < sessionDuration/3 {
 		_ = db.ExtendSessionLifetime(sessionID)
 	}
 
-	return session, nil
+	return session, true
 }
 
-func (db *Database) DeleteSession(sessionID string) error {
+func (db *Database) DeleteSession(sessionID string) bool {
 	sessionIDByte := utils.Unhex(sessionID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	_, _ = db.db.ExecContext(
+	_, err := db.db.ExecContext(
 		ctx,
 		"DELETE FROM sessions WHERE id = ?",
 		sessionIDByte,
 	)
 	cancel()
-	if ctx.Err() != nil && !errors.Is(ctx.Err(), context.Canceled) {
+	if err != nil {
 		log.Error(ctx.Err())
 	}
-	return nil
+	return true
 }
 
-func (db *Database) DeleteExpiredSessions() error {
+func (db *Database) DeleteExpiredSessions() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
 	_, err := db.db.ExecContext(
 		ctx,
@@ -98,13 +90,13 @@ func (db *Database) DeleteExpiredSessions() error {
 		time.Now(),
 	)
 	cancel()
-	if ctx.Err() != nil && !errors.Is(ctx.Err(), context.Canceled) {
+	if err != nil {
 		log.Error(ctx.Err())
 	}
-	return err
+	return true
 }
 
-func (db *Database) ExtendSessionLifetime(sessionID string) error {
+func (db *Database) ExtendSessionLifetime(sessionID string) bool {
 	sessionIDByte := utils.Unhex(sessionID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	_, err := db.db.ExecContext(
@@ -114,10 +106,9 @@ func (db *Database) ExtendSessionLifetime(sessionID string) error {
 		sessionIDByte,
 	)
 	cancel()
-	if ctx.Err() != nil {
+	if err != nil {
 		log.Error(ctx.Err())
-	} else if err != nil {
-		return ErrSessionExpired
+		return false
 	}
-	return nil
+	return true
 }

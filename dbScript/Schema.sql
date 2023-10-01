@@ -39,21 +39,21 @@ VALUES ('PUB');
 CREATE TABLE novels
 (
     id           BINARY(16) PRIMARY KEY,
-    title        VARCHAR(255) NOT NULL,
-    tagline      VARCHAR(255) NOT NULL,
-    description  TEXT         NOT NULL,
-    author       BINARY(16)   NOT NULL,
-    image        VARCHAR(255) NOT NULL,
-    language     CHAR(3)      NOT NULL,
-    created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    total_rating INT          NOT NULL DEFAULT 0,
-    rate_count   INT          NOT NULL DEFAULT 0,
-    views        INT          NOT NULL DEFAULT 0,
-    clicks       INT          NOT NULL DEFAULT 0,
-    adult        BOOLEAN      NOT NULL DEFAULT FALSE,
-    status_id    INT          NOT NULL DEFAULT 1,
-    visibility   INT          NOT NULL DEFAULT 1
+    title        VARCHAR(255)  NOT NULL,
+    tagline      VARCHAR(255)  NOT NULL,
+    description  VARCHAR(5000) NOT NULL,
+    author       BINARY(16)    NOT NULL,
+    image        VARCHAR(255)  NOT NULL,
+    language     CHAR(3)       NOT NULL,
+    created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    total_rating INT           NOT NULL DEFAULT 0,
+    rate_count   INT           NOT NULL DEFAULT 0,
+    views        INT           NOT NULL DEFAULT 0,
+    clicks       INT           NOT NULL DEFAULT 0,
+    adult        BOOLEAN       NOT NULL DEFAULT FALSE,
+    status_id    INT           NOT NULL DEFAULT 1,
+    visibility   INT           NOT NULL DEFAULT 1
 );
 
 CREATE INDEX novels_title_index ON novels (title);
@@ -63,8 +63,8 @@ CREATE INDEX novels_status_id_index ON novels (status_id);
 CREATE TABLE tags
 (
     id          INT PRIMARY KEY AUTO_INCREMENT,
-    name        VARCHAR(255) NOT NULL,
-    description TEXT         NOT NULL,
+    name        VARCHAR(50)  NOT NULL,
+    description VARCHAR(300) NOT NULL,
     created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -83,15 +83,15 @@ CREATE INDEX novel_tags_tag_id_index ON novel_tags (tag_id);
 CREATE TABLE volumes
 (
     id          BINARY(16) PRIMARY KEY,
-    novel_id    BINARY(16)   NOT NULL,
-    title       VARCHAR(255) NOT NULL,
-    tagline     VARCHAR(255) NOT NULL,
-    description TEXT         NOT NULL,
-    image       VARCHAR(255) NOT NULL,
-    created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    views       INT          NOT NULL DEFAULT 0,
-    visibility  INT          NOT NULL DEFAULT 1
+    novel_id    BINARY(16)    NOT NULL,
+    title       VARCHAR(255)  NOT NULL,
+    tagline     VARCHAR(255)  NOT NULL,
+    description VARCHAR(5000) NOT NULL,
+    image       VARCHAR(255)  NOT NULL,
+    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    views       INT           NOT NULL DEFAULT 0,
+    visibility  INT           NOT NULL DEFAULT 1
 );
 
 CREATE INDEX volumes_novel_id_index ON volumes (novel_id);
@@ -115,11 +115,11 @@ CREATE INDEX chapters_title_index ON chapters (title);
 CREATE TABLE comments
 (
     id         BINARY(16) PRIMARY KEY,
-    to_id      BINARY(16) NOT NULL,
-    user_id    BINARY(16) NOT NULL,
-    content    TEXT       NOT NULL,
-    created_at TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    to_id      BINARY(16)    NOT NULL,
+    user_id    BINARY(16)    NOT NULL,
+    content    VARCHAR(5000) NOT NULL,
+    created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE INDEX comments_to_id_index ON comments (to_id);

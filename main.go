@@ -17,8 +17,8 @@ import (
 //	@title		Light novel API
 //	@version	1.0
 
-//	@host		localhost:8080
-//	@BasePath	/api/v1
+// @host		localhost:8080
+// @BasePath	/api/v1
 func main() {
 	mysqlConfig := mysql.Config{
 		User:      os.Getenv("MYSQL_USER"),
@@ -54,11 +54,10 @@ func main() {
 	authMiddleware := middleware.AuthenticationCheck(&database)
 	app.Use(authMiddleware)
 
-	swagger := swagger.New(swagger.Config{
+	app.Use("/", swagger.New(swagger.Config{
+		BasePath: "",
 		FilePath: "./docs/swagger.json",
-		BasePath: "/",
-	})
-	app.Use(swagger)
+	}))
 
 	app.All("/ok", func(c *fiber.Ctx) error {
 		log.Debug(c.Locals(middleware.KeyIsUserAuth))

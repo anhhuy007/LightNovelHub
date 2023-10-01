@@ -1,24 +1,27 @@
 package model
 
-type CreateNovelArgs struct {
-	Title       string
-	Tagline     string
-	Description string
-	Image       string
-	Language    string
-	Author      []byte
+type NovelMetadata struct {
+	Title       string        `json:"title"`
+	Tagline     string        `json:"tagline"`
+	Description string        `json:"description"`
+	Image       string        `json:"image"`
+	Language    string        `json:"language"`
+	Author      []byte        `json:"-"`
+	Visibility  VisibilityID  `json:"visibility"`
+	Status      NovelStatusID `json:"status"`
 }
 
 type DB interface {
-	CreateSession(userID []byte, deviceName string) (SessionInfo, error)
-	GetSession(sessionID string) (Session, error)
-	DeleteSession(sessionID string) error
-	DeleteExpiredSessions() error
-	ExtendSessionLifetime(sessionID string) error
+	CreateSession(userID []byte, deviceName string) (SessionInfo, bool)
+	GetSession(sessionID string) (Session, bool)
+	DeleteSession(sessionID string) bool
+	DeleteExpiredSessions() bool
+	ExtendSessionLifetime(sessionID string) bool
 
-	CreateUser(username, password string) ([]byte, error)
-	GetUser(username string) (User, error)
+	CreateUser(username, password string) ([]byte, bool)
+	GetUser(username string) (User, bool)
 
-	CreateNovel(args CreateNovelArgs) ([]byte, error)
-	GetNovelView(novelID string) (NovelView, error)
+	CreateNovel(args NovelMetadata) ([]byte, bool)
+	GetNovelView(novelID string) (NovelView, bool)
+	UpdateNovel(novelID string, args NovelMetadata) bool
 }

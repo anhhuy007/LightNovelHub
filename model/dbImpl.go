@@ -2,7 +2,6 @@ package model
 
 import (
 	"Lightnovel/utils"
-	"database/sql"
 	"errors"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
@@ -22,28 +21,8 @@ func NewDatabase(db *sqlx.DB, timeoutDuration time.Duration) Database {
 	}
 }
 
-func isLetterOnly(s string) bool {
-	for _, c := range s {
-		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') {
-			return false
-		}
-	}
-	return true
-}
-
-func isUsernameValid(username string) bool {
-	return len(username) != 0 && len(username) <= 32 && isLetterOnly(username)
-}
-
-func isPasswordValid(password string) bool {
-	return !(len(password) < 10 || len(password) > 72)
-}
-
-func (db *Database) GetUser(username string) (User, error) {
+func (db *Database) GetUser(username string) (User, bool) {
 	var user User
-	if !isUsernameValid(username) {
-		return user, ErrInvalidUsername
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(
 		ctx,
@@ -52,20 +31,18 @@ func (db *Database) GetUser(username string) (User, error) {
 		username,
 	)
 	cancel()
-	if errors.Is(err, sql.ErrNoRows) {
-		return User{}, ErrUserNotFound
-	} else if err != nil && !errors.Is(err, context.Canceled) {
+	if err != nil {
 		log.Error(err)
-		return User{}, ErrInternal
+		return User{}, false
 	}
-	return user, nil
+	return user, true
 }
 
-func (db *Database) GetUserView(username string) (UserView, error) {
+func (db *Database) GetUserView(username string) (UserView, bool) {
 	var userView UserView
-	user, err := db.GetUser(username)
-	if err != nil {
-		return userView, err
+	user, ok := db.GetUser(username)
+	if !ok {
+		return userView, false
 	}
 	userView.ID = user.ID
 	userView.Username = user.Username
@@ -73,23 +50,16 @@ func (db *Database) GetUserView(username string) (UserView, error) {
 	userView.Displayname = user.Displayname
 	userView.CreatedAt = user.CreatedAt
 
-	return userView, nil
+	return userView, true
 }
 
-func (db *Database) CreateUser(username, password string) ([]byte, error) {
+func (db *Database) CreateUser(username, password string) ([]byte, bool) {
 	var userId []byte
-	_, err := db.GetUser(username)
-	if err == nil {
-		return userId, ErrUserAlreadyExist
-	}
 
-	if !isPasswordValid(password) {
-		return userId, ErrInvalidPassword
-	}
 	hashed, err := utils.PasswordHash(password)
 	if err != nil {
 		log.Debug(err)
-		return userId, ErrInvalidPassword
+		return userId, false
 	}
 
 	userId = utils.GetUUID()
@@ -105,17 +75,17 @@ func (db *Database) CreateUser(username, password string) ([]byte, error) {
 
 	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Error(err)
-		return userId, ErrInternal
+		return userId, false
 	}
-	return userId, nil
+	return userId, true
 }
 
-func (db *Database) CreateNovel(args CreateNovelArgs) ([]byte, error) {
+func (db *Database) CreateNovel(args NovelMetadata) ([]byte, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	uid := utils.GetUUID()
 	_, err := db.db.ExecContext(
 		ctx,
-		"INSERT INTO novels (id, title, tagline, description, author, image, language) VALUES (?,?,?,?,?,?,?)",
+		"INSERT INTO novels (id, title, tagline, description, author, image, language, visibility) VALUES (?,?,?,?,?,?,?,?)",
 		uid,
 		args.Title,
 		args.Tagline,
@@ -123,27 +93,29 @@ func (db *Database) CreateNovel(args CreateNovelArgs) ([]byte, error) {
 		args.Author,
 		args.Image,
 		args.Language,
+		args.Visibility,
 	)
 	cancel()
 	if err != nil {
 		log.Error(err)
-		return []byte{}, ErrInternal
+		return []byte{}, false
 	}
-	return uid, nil
+	return uid, true
 }
 
-func (db *Database) getNovel(novelID []byte) (Novel, error) {
+func (db *Database) getNovel(novelID []byte) (Novel, bool) {
 	var novel Novel
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(ctx, &novel, "SELECT * FROM novels WHERE id = ?", novelID)
 	cancel()
 	if err != nil {
-		return novel, err
+		log.Error(err)
+		return novel, false
 	}
-	return novel, nil
+	return novel, true
 }
 
-func (db *Database) getAuthor(authorID []byte) (UserView, error) {
+func (db *Database) getAuthor(authorID []byte) (UserView, bool) {
 	var user UserView
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(
@@ -153,16 +125,14 @@ func (db *Database) getAuthor(authorID []byte) (UserView, error) {
 		authorID,
 	)
 	cancel()
-	if errors.Is(err, sql.ErrNoRows) {
-		return user, ErrUserNotFound
-	} else if err != nil && !errors.Is(err, context.Canceled) {
+	if err != nil {
 		log.Error(err)
-		return user, ErrInternal
+		return user, false
 	}
-	return user, nil
+	return user, true
 }
 
-func (db *Database) getVisibility(visibilityID int) (string, error) {
+func (db *Database) getVisibility(visibilityID int) (string, bool) {
 	var visibility string
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(
@@ -173,12 +143,13 @@ func (db *Database) getVisibility(visibilityID int) (string, error) {
 	)
 	cancel()
 	if err != nil {
-		return "", ErrInternal
+		log.Error(err)
+		return "", false
 	}
-	return visibility, nil
+	return visibility, true
 }
 
-func (db *Database) getStatus(statusId int) (string, error) {
+func (db *Database) getStatus(statusId int) (string, bool) {
 	var status string
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(
@@ -190,12 +161,12 @@ func (db *Database) getStatus(statusId int) (string, error) {
 	cancel()
 	if err != nil {
 		log.Error(err)
-		return "", ErrInternal
+		return "", false
 	}
-	return status, nil
+	return status, true
 }
 
-func (db *Database) getTags(novelID []byte) ([]TagView, error) {
+func (db *Database) getTags(novelID []byte) ([]TagView, bool) {
 	var tags []TagView
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryContext(
@@ -214,12 +185,12 @@ func (db *Database) getTags(novelID []byte) ([]TagView, error) {
 		err = row.Scan(&tagView.ID, &tagView.Name)
 		if err != nil {
 			log.Error(err)
-			return tags, ErrInternal
+			return tags, false
 		}
 		tags = append(tags, tagView)
 	}
 	cancel()
-	return tags, nil
+	return tags, true
 }
 
 func (db *Database) countVolume(novelID []byte) int {
@@ -234,38 +205,26 @@ func (db *Database) countVolume(novelID []byte) int {
 	cancel()
 	if err != nil {
 		log.Error(err)
+		return 0
 	}
 	return volumes
 }
 
-func (db *Database) GetNovelView(novelID string) (NovelView, error) {
+func (db *Database) GetNovelView(novelID string) (NovelView, bool) {
 	novelIDBin := utils.Unhex(novelID)
-	novel, err := db.getNovel(novelIDBin)
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			log.Error(err)
-			return NovelView{}, ErrNovelNotFound
-		}
-		return NovelView{}, ErrInternal
+	novel, ok := db.getNovel(novelIDBin)
+	if !ok {
+		return NovelView{}, false
 	}
 
-	author, err := db.getAuthor(novel.Author)
-	if err != nil {
-		return NovelView{}, err
+	author, ok := db.getAuthor(novel.Author)
+	if !ok {
+		return NovelView{}, false
 	}
 
-	status, err := db.getStatus(novel.StatusID)
-	if err != nil {
-		return NovelView{}, err
-	}
-	visibility, err := db.getVisibility(novel.Visibility)
-	if err != nil {
-		return NovelView{}, err
-	}
-
-	tags, err := db.getTags(novel.ID)
-	if err != nil {
-		return NovelView{}, err
+	tags, ok := db.getTags(novel.ID)
+	if !ok {
+		tags = []TagView{}
 	}
 
 	return NovelView{
@@ -283,9 +242,32 @@ func (db *Database) GetNovelView(novelID string) (NovelView, error) {
 		Clicks:      novel.Clicks,
 		Adult:       novel.Adult,
 		Author:      author,
-		Status:      status,
-		Visibility:  visibility,
+		Status:      novel.StatusID.String(),
+		Visibility:  novel.Visibility.String(),
 		Tags:        tags,
 		Volumes:     db.countVolume(novelIDBin),
-	}, nil
+	}, false
+}
+
+func (db *Database) UpdateNovel(novelID string, args NovelMetadata) bool {
+	novelIDBin := utils.Unhex(novelID)
+	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
+	_, err := db.db.ExecContext(
+		ctx,
+		"UPDATE novels SET title = ?, tagline = ?, description = ?, image = ?, language = ?, visibility = ?, status_id = ? WHERE id = ?",
+		args.Title,
+		args.Tagline,
+		args.Description,
+		args.Image,
+		args.Language,
+		args.Visibility,
+		args.Status,
+		novelIDBin,
+	)
+	cancel()
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	return true
 }

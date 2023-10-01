@@ -9,9 +9,10 @@ import (
 const (
 	KeyIsUserAuth  = "isUserAuth"
 	KeyUserSession = "userSession"
+	BodySession    = "session"
 )
 
-func AuthenticationCheck(db model.DB) func(*fiber.Ctx) error {
+func AuthenticationCheck(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		body := map[string]string{}
 		err := c.BodyParser(&body)
@@ -20,13 +21,13 @@ func AuthenticationCheck(db model.DB) func(*fiber.Ctx) error {
 			return c.Next()
 		}
 
-		sessionInfoStr, ok := body["session"]
+		sessionInfoStr, ok := body[BodySession]
 		if !ok {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()
 		}
-		session, err := db.GetSession(sessionInfoStr)
-		if err != nil || session.ExpireAt.Before(time.Now()) {
+		session, ok := db.GetSession(sessionInfoStr)
+		if !ok || session.ExpireAt.Before(time.Now()) {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()
 		}
