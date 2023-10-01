@@ -43,18 +43,18 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 	accountRoute.Post("/renew", renew(db))
 }
 
-//	 Login
+//	Login
 //
-//	@Summary		Log the user in, return a new user session
-//	@Description	The session token should be renewed a week before expires, possible error: WrongPassword, UserNotFound, BadInput, BadPassword, BadUsername, BadDeviceName
-//	@Tags			accounts
-//	@Accept			json
-//	@Produce		json
-//	@Param			credential	body		authCredentials	true	"User credentials"
-//	@Success		200			{object}	model.SessionInfo
-//	@Failure		400			{object}	ErrorJSON
-//	@Failure		500
-//	@Router			/accounts/login [POST]
+// @Summary		Log the user in, return a new user session
+// @Description	The session token should be renewed a week before expires, possible error: WrongPassword, UserNotFound, BadInput, BadPassword, BadUsername, BadDeviceName
+// @Tags			accounts
+// @Accept			json
+// @Produce		json
+// @Param			credential	body		authCredentials	true	"User credentials"
+// @Success		200			{object}	model.SessionInfo
+// @Failure		400			{object}	ErrorJSON
+// @Failure		500
+// @Router			/accounts/login [POST]
 func login(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var authCredentials authCredentials
@@ -196,7 +196,7 @@ func PasswordVerify(password string, hash []byte) bool {
 }
 
 func IsUsernameValid(username string) bool {
-	matched, _ := regexp.MatchString(fmt.Sprintf("^[a-zA-Z]{#v,#v}$", model.UserNameMinLength, model.UserNameMaxLength), username)
+	matched, _ := regexp.MatchString(fmt.Sprintf("^[a-zA-Z]{%v,%v}$", model.UserNameMinLength, model.UserNameMaxLength), username)
 	return matched
 }
 
