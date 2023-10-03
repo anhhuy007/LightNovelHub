@@ -58,7 +58,7 @@ CREATE TABLE novels
 
 CREATE INDEX novels_title_index ON novels (title);
 CREATE INDEX novels_author_index ON novels (author);
-CREATE INDEX novels_status_id_index ON novels (status_id);
+CREATE INDEX novels_status_id_index ON novels (status);
 
 CREATE TABLE tags
 (
@@ -136,6 +136,20 @@ CREATE TABLE images
 
 CREATE INDEX images_user_id_index ON images (user_id);
 CREATE INDEX images_novel_id_index ON images (novel_id);
+
+CREATE TABLE follows_user
+(
+    from_id BINARY(16) NOT NULL,
+    to_id   BINARY(16) NOT NULL,
+    PRIMARY KEY (from_id, to_id)
+);
+
+CREATE TABLE follows_novel
+(
+    user_id BINARY(16) NOT NULL,
+    novel_id BINARY(16) NOT NULL,
+    PRIMARY KEY (user_id, novel_id)
+);
 
 CREATE TABLE report_reason
 (

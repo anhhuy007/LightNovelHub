@@ -1,27 +1,29 @@
 package model
 
-type NovelMetadata struct {
-	Title       string        `json:"title"`
-	Tagline     string        `json:"tagline"`
-	Description string        `json:"description"`
-	Image       string        `json:"image"`
-	Language    string        `json:"language"`
-	Author      []byte        `json:"-"`
-	Visibility  VisibilityID  `json:"visibility"`
-	Status      NovelStatusID `json:"status"`
-}
-
 type DB interface {
 	CreateSession(userID []byte, deviceName string) (SessionInfo, bool)
-	GetSession(sessionID string) (Session, bool)
-	DeleteSession(sessionID string) bool
+	GetSession(sessionID []byte) (Session, bool)
+	DeleteSession(sessionID []byte) bool
 	DeleteExpiredSessions() bool
-	ExtendSessionLifetime(sessionID string) bool
+	DeletaAllSessions(userID []byte) bool
+	ExtendSessionLifetime(sessionID []byte) bool
 
-	CreateUser(username, password string) ([]byte, bool)
+	CreateUser(username string, password []byte) ([]byte, bool)
 	GetUser(username string) (User, bool)
+	GetUserView(username string) (UserView, bool)
+	GetUserViewWithID(userID []byte) (UserView, bool)
+	GetUserWithID(userID []byte) (User, bool)
+	GetUserMetadataSmall(userID []byte) (UserMetadataSmall, bool)
+	DeleteUser(userID []byte) bool
+	UpdateUserMetadata(userID []byte, args UserMetadata) bool
+	UpdateUserPassword(userID []byte, newPassword []byte) bool
+
+	GetFollowedUser(userID []byte) []UserMetadataSmall
+	GetFollowedNovel(userID []byte) []NovelMetadataSmall
 
 	CreateNovel(args NovelMetadata) ([]byte, bool)
-	GetNovelView(novelID string) (NovelView, bool)
-	UpdateNovel(novelID string, args NovelMetadata) bool
+	GetNovelView(novelID []byte) (NovelView, bool)
+	GetNovel(novelID []byte) (Novel, bool)
+	UpdateNovelMetadata(novelID []byte, args NovelMetadata) bool
+	GetUsersNovels(UserID []byte) []NovelMetadataSmall
 }

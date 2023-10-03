@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"Lightnovel/model"
+	"encoding/hex"
 	"github.com/gofiber/fiber/v2"
 	"time"
 )
@@ -11,6 +12,10 @@ const (
 	KeyUserSession = "userSession"
 	BodySession    = "session"
 )
+
+func Unhex(s string) ([]byte, error) {
+	return hex.DecodeString(s[:model.IDHexLength])
+}
 
 func AuthenticationCheck(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -26,7 +31,12 @@ func AuthenticationCheck(db model.DB) fiber.Handler {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()
 		}
-		session, ok := db.GetSession(sessionInfoStr)
+		sessionInfo, err := Unhex(sessionInfoStr)
+		if err != nil {
+			c.Locals(KeyIsUserAuth, false)
+			return c.Next()
+		}
+		session, ok := db.GetSession(sessionInfo)
 		if !ok || session.ExpireAt.Before(time.Now()) {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()
@@ -36,5 +46,4 @@ func AuthenticationCheck(db model.DB) fiber.Handler {
 		c.Locals(KeyUserSession, session)
 		return c.Next()
 	}
-
 }

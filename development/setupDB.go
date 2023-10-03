@@ -2,7 +2,7 @@ package main
 
 import (
 	"Lightnovel/model"
-	"Lightnovel/utils"
+	"Lightnovel/route"
 	"context"
 	"database/sql"
 	"github.com/go-sql-driver/mysql"
@@ -28,7 +28,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer func() {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
@@ -42,25 +47,25 @@ func main() {
 	// INSERT MOCK DATA
 	users := []model.User{
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Username:    "Thong",
-			Displayname: "Thông Nguyễn",
+			Displayname: sqlString("Thông Nguyễn"),
 			Password:    pwd("Thong12345"),
 			Email:       sqlString("thong@thong.com"),
 			Image:       "",
 		},
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Username:    "Huy",
-			Displayname: "Anh Huy",
+			Displayname: sqlString("Anh Huy"),
 			Password:    pwd("AnhHuy12345"),
 			Email:       sqlString("anh@huy.com"),
 			Image:       "https://images.unsplash.com/photo-1693143600183-85bd2f7c99e5?auto=format&fit=crop&w=2070&q=80",
 		},
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Username:    "Vu",
-			Displayname: "Anh Vũ",
+			Displayname: sqlString("Anh Vũ"),
 			Password:    pwd("Guraa12345"),
 			Email:       sqlString("vu@anh.com"),
 			Image:       "https://images.unsplash.com/photo-1692260122105-28c26fc3c882?auto=format&fit=crop&w=720&q=80",
@@ -104,7 +109,7 @@ func main() {
 
 	novels := []model.Novel{
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Title:       "Tensei Shitara Slime Datta Ken",
 			Tagline:     "That Time I Got Reincarnated as a Slime",
 			Description: "Some description",
@@ -112,13 +117,13 @@ func main() {
 			Image:       "https://images.unsplash.com/photo-1693346223929-17afbce70514?auto=format&fit=crop&w=1974&q=80",
 			Language:    "eng",
 			Visibility:  2,
-			StatusID:    1,
+			Status:      1,
 			Adult:       false,
 			Views:       50,
 			Clicks:      70,
 		},
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Title:       "Solo Leveling",
 			Tagline:     "Solo Leveling",
 			Description: "Some description",
@@ -126,13 +131,13 @@ func main() {
 			Image:       "https://images.unsplash.com/photo-1693369832705-3954d816601b?auto=format&fit=crop&w=1974&q=80",
 			Language:    "eng",
 			Visibility:  2,
-			StatusID:    2,
+			Status:      2,
 			Adult:       false,
 			Views:       100,
 			Clicks:      200,
 		},
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Title:       "The Beginning After the End",
 			Tagline:     "The Beginning After the End",
 			Description: "Some description",
@@ -140,13 +145,13 @@ func main() {
 			Image:       "",
 			Language:    "eng",
 			Visibility:  1,
-			StatusID:    1,
+			Status:      1,
 			Adult:       true,
 			Views:       40,
 			Clicks:      50,
 		},
 		{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			Title:       "The Legendary Moonlight Sculptor",
 			Tagline:     "The Legendary Moonlight Sculptor",
 			Description: "Some description",
@@ -154,7 +159,7 @@ func main() {
 			Image:       "https://images.unsplash.com/photo-1692893906137-9a93c125825c?auto=format&fit=crop&w=1964&q=80",
 			Language:    "eng",
 			Visibility:  2,
-			StatusID:    1,
+			Status:      1,
 			Adult:       false,
 			Views:       90,
 			Clicks:      100,
@@ -162,7 +167,7 @@ func main() {
 	}
 	for _, novel := range novels {
 		db.MustExec(
-			"INSERT INTO novels (id, title, tagline, description, author, image, language, visibility, status_id, adult, views, clicks) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+			"INSERT INTO novels (id, title, tagline, description, author, image, language, visibility, status, adult, views, clicks) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
 			novel.ID,
 			novel.Title,
 			novel.Tagline,
@@ -171,14 +176,14 @@ func main() {
 			novel.Image,
 			novel.Language,
 			novel.Visibility,
-			novel.StatusID,
+			novel.Status,
 			novel.Adult,
 			novel.Views,
 			novel.Clicks,
 		)
 	}
 
-	novelTags := []model.Novel_tags{
+	novelTags := []model.NovelTags{
 		{
 			NovelID: novels[0].ID,
 			TagID:   tags[0].ID,
@@ -203,11 +208,11 @@ func main() {
 		)
 	}
 
-	volumes := []model.Volume{}
+	var volumes []model.Volume
 	for i := 0; i < 3; i++ {
 		for j := 1; j <= 2; j++ {
 			volumes = append(volumes, model.Volume{
-				ID:          utils.GetUUID(),
+				ID:          model.GetUUID(),
 				NovelID:     novels[i].ID,
 				Title:       "Volume " + strconv.Itoa(j) + " of " + novels[i].Title,
 				Tagline:     "Tagline",
@@ -218,7 +223,7 @@ func main() {
 			})
 		}
 		volumes = append(volumes, model.Volume{
-			ID:          utils.GetUUID(),
+			ID:          model.GetUUID(),
 			NovelID:     novels[i].ID,
 			Title:       "Volume " + "3" + " of " + novels[i].Title,
 			Tagline:     "Tagline",
@@ -241,11 +246,11 @@ func main() {
 		)
 	}
 
-	chapters := []model.Chapter{}
+	var chapters []model.Chapter
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			chapters = append(chapters, model.Chapter{
-				ID:         utils.GetUUID(),
+				ID:         model.GetUUID(),
 				VolumeID:   volumes[i*3+j].ID,
 				Title:      "Chapter " + strconv.Itoa(j) + " of " + volumes[i*3+j].Title,
 				Content:    "# Content\n ## Content\n ### Content\n #### Content",
@@ -254,7 +259,7 @@ func main() {
 			})
 		}
 		chapters = append(chapters, model.Chapter{
-			ID:         utils.GetUUID(),
+			ID:         model.GetUUID(),
 			VolumeID:   volumes[i*3].ID,
 			Title:      "Chapter " + "3" + " of " + volumes[i*3].Title,
 			Content:    "# Content\n ## Content\n ### Content\n #### Content",
@@ -295,10 +300,10 @@ func main() {
 		)
 	}
 
-	comments := []model.Comment{}
+	var comments []model.Comment
 	for _, user := range users {
 		for _, novel := range novels {
-			id := utils.GetUUID()
+			id := model.GetUUID()
 			comments = append(comments, model.Comment{
 				ID:      id,
 				ToID:    novel.ID,
@@ -306,7 +311,7 @@ func main() {
 				Content: "**Comment** content",
 			})
 			comments = append(comments, model.Comment{
-				ID:      utils.GetUUID(),
+				ID:      model.GetUUID(),
 				ToID:    id,
 				UserID:  user.ID,
 				Content: "Commenting to a *comment*",
@@ -314,7 +319,7 @@ func main() {
 		}
 		for _, volume := range volumes {
 			comments = append(comments, model.Comment{
-				ID:      utils.GetUUID(),
+				ID:      model.GetUUID(),
 				ToID:    volume.ID,
 				UserID:  user.ID,
 				Content: "Comment *content*",
@@ -322,7 +327,7 @@ func main() {
 		}
 		for _, chapter := range chapters {
 			comments = append(comments, model.Comment{
-				ID:      utils.GetUUID(),
+				ID:      model.GetUUID(),
 				ToID:    chapter.ID,
 				UserID:  user.ID,
 				Content: "Comment content",
@@ -336,6 +341,49 @@ func main() {
 		)
 	}
 
+	// Add followUsers
+	followUsers := []model.FollowUser{
+		{
+			FromID: users[0].ID,
+			ToID:   users[1].ID,
+		},
+		{
+			FromID: users[0].ID,
+			ToID:   users[2].ID,
+		},
+		{
+			FromID: users[1].ID,
+			ToID:   users[0].ID,
+		},
+	}
+	for _, follow := range followUsers {
+		db.MustExec(
+			"INSERT INTO follows_user (from_id, to_id) VALUES (?,?)",
+			follow.FromID, follow.ToID,
+		)
+	}
+
+	followNovel := []model.FollowNovel{
+		{
+			UserID:  users[0].ID,
+			NovelID: novels[1].ID,
+		},
+		{
+			UserID:  users[0].ID,
+			NovelID: novels[2].ID,
+		},
+		{
+			UserID:  users[2].ID,
+			NovelID: novels[0].ID,
+		},
+	}
+	for _, follow := range followNovel {
+		db.MustExec(
+			"INSERT INTO follows_novel (user_id, novel_id) VALUES (?,?)",
+			follow.UserID, follow.NovelID,
+		)
+	}
+
 }
 
 func DropAllTable(db *sqlx.DB) {
@@ -343,7 +391,12 @@ func DropAllTable(db *sqlx.DB) {
 		"SELECT concat('DROP TABLE IF EXISTS `', table_name, '`;') AS result FROM information_schema.tables WHERE table_schema = ?;",
 		os.Getenv("MYSQL_DATABASE"),
 	)
-	defer rows.Close()
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	db.MustExec("SET FOREIGN_KEY_CHECKS = 0")
 	for rows.Next() {
 		s := ""
@@ -377,7 +430,7 @@ func SetupDatabase(db *sqlx.DB) {
 }
 
 func pwd(s string) []byte {
-	res, _ := utils.PasswordHash(s)
+	res, _ := route.PasswordHash(s)
 	return res
 }
 

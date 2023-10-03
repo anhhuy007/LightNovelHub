@@ -8,14 +8,14 @@ import (
 type User struct {
 	ID          []byte         `json:"id"`
 	Username    string         `json:"username"`
-	Displayname string         `json:"displayName"`
-	Password    []byte         `json:"password"`
+	Displayname sql.NullString `json:"displayName"`
+	Password    []byte         `json:"-"`
 	Email       sql.NullString `json:"email"`
 	Image       string         `json:"image"`
 	CreatedAt   time.Time      `json:"created_at"  db:"created_at"`
 }
 
-type Novel_status struct {
+type NovelStatus struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
@@ -35,7 +35,7 @@ type Novel struct {
 	Views       int           `json:"views"`
 	Clicks      int           `json:"clicks"`
 	Adult       bool          `json:"adult"`
-	StatusID    NovelStatusID `json:"statusID"    db:"status_id"`
+	Status      NovelStatusID `json:"statusID"    db:"status"`
 	Visibility  VisibilityID  `json:"visibility"`
 }
 
@@ -46,7 +46,7 @@ type Tag struct {
 	CreateAt    time.Time `json:"createAt"    db:"created_at"`
 }
 
-type Novel_tags struct {
+type NovelTags struct {
 	NovelID []byte `json:"novelId" db:"novel_id"`
 	TagID   int    `json:"tagId"   db:"tag_id"`
 }
@@ -90,6 +90,16 @@ type Image struct {
 	NovelID  []byte    `json:"novelId"  db:"novel_id"`
 	Url      string    `json:"url"`
 	CreateAt time.Time `json:"createAt" db:"created_at"`
+}
+
+type FollowUser struct {
+	FromID []byte `json:"fromId" db:"from_id"`
+	ToID   []byte `json:"toId"   db:"to_id"`
+}
+
+type FollowNovel struct {
+	UserID  []byte `json:"userId"  db:"user_id"`
+	NovelID []byte `json:"novelId" db:"novel_id"`
 }
 
 type Report struct {

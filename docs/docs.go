@@ -15,6 +15,177 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/accounts/:username": {
+            "get": {
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get user's metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UserId",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/accounts/changepassword": {
+            "post": {
+                "description": "Possible error: BadInput, BadPassword, WrongPassword",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Change user's password",
+                "parameters": [
+                    {
+                        "description": "Old and new password",
+                        "name": "credential",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/route.changePasswordCredential"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/route.ErrorJSON"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/accounts/delete": {
+            "delete": {
+                "description": "Possible error: BadInput, BadPassword, BadUsername, UserNotFound",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Delete user's account and all other data",
+                "deprecated": true,
+                "parameters": [
+                    {
+                        "description": "User credentials",
+                        "name": "credential",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/route.requiredCredential"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/route.ErrorJSON"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/accounts/followed/novels": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get user's followed novels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.NovelMetadataSmall"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/accounts/followed/users": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get user's followed users",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.UserMetadataSmall"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
         "/accounts/login": {
             "post": {
                 "description": "The session token should be renewed a week before expires, possible error: WrongPassword, UserNotFound, BadInput, BadPassword, BadUsername, BadDeviceName",
@@ -173,8 +344,76 @@ const docTemplate = `{
                 }
             }
         },
-        "/novel/:NovelID": {
-            "get": {
+        "/accounts/self": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get user's metadata from session",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserView"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/accounts/update": {
+            "patch": {
+                "description": "Possible error: BadInput, BadUsername, BadDisplayname, BadEmail, UserAlreadyExists",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Update user's metadata",
+                "parameters": [
+                    {
+                        "description": "User metadata",
+                        "name": "credential",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UserMetadata"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/route.ErrorJSON"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/novel/:novelID": {
+            "post": {
                 "description": "If the novel is private, the user need to be logged in with the author account",
                 "produces": [
                     "application/json"
@@ -199,6 +438,81 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.NovelView"
                         }
                     },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "novel"
+                ],
+                "summary": "Delete the novel and all the related stuff like volumes, chapters, comments, images with the provided novel id",
+                "deprecated": true,
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Novel ID",
+                        "name": "NovelID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            },
+            "patch": {
+                "description": "Possible error code: MissingField, InvalidLanguageFormat, TitleTooLong, TaglineTooLong",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novel"
+                ],
+                "summary": "Update the novel metadata with the provided metadata",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Novel ID",
+                        "name": "NovelID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Novel details",
+                        "name": "NovelDetails",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.NovelMetadata"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/route.ErrorJSON"
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized"
                     },
@@ -213,7 +527,7 @@ const docTemplate = `{
         },
         "/novel/create": {
             "post": {
-                "description": "Possible error code: Missing field, Invalid language format, Title too long, Tagline too long",
+                "description": "Possible error code: MissingField, InvalidLanguageFormat, TitleTooLong, TaglineTooLong",
                 "consumes": [
                     "application/json"
                 ],
@@ -250,6 +564,47 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/novel/from/:userID": {
+            "post": {
+                "description": "If the user is not logged in, only the public novels will be returned",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "novel"
+                ],
+                "summary": "Get all the novels from the user with the provided user id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "UserID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.NovelMetadataSmall"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "404": {
+                        "description": "Not Found"
                     },
                     "500": {
                         "description": "Internal Server Error"
@@ -293,6 +648,50 @@ const docTemplate = `{
                 }
             }
         },
+        "model.NovelMetadataSmall": {
+            "type": "object",
+            "properties": {
+                "adult": {
+                    "type": "boolean"
+                },
+                "author": {
+                    "$ref": "#/definitions/model.UserMetadataSmall"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "rateCount": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tagline": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totalRating": {
+                    "type": "integer"
+                },
+                "views": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "type": "string"
+                }
+            }
+        },
         "model.NovelStatusID": {
             "type": "integer",
             "enum": [
@@ -313,7 +712,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "author": {
-                    "$ref": "#/definitions/model.UserView"
+                    "$ref": "#/definitions/model.UserMetadataSmall"
                 },
                 "clicks": {
                     "type": "integer"
@@ -323,6 +722,9 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "followCount": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"
@@ -390,20 +792,14 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UserView": {
+        "model.UserMetadata": {
             "type": "object",
             "properties": {
-                "created_at": {
+                "displayname": {
                     "type": "string"
                 },
-                "displayName": {
+                "email": {
                     "type": "string"
-                },
-                "id": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 },
                 "image": {
                     "type": "string"
@@ -413,11 +809,57 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UserMetadataSmall": {
+            "type": "object",
+            "properties": {
+                "displayName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UserView": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "followCount": {
+                    "type": "integer"
+                },
+                "followedCount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "novelCount": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "model.VisibilityID": {
             "type": "integer",
             "enum": [
-                2,
-                1
+                1,
+                2
             ],
             "x-enum-varnames": [
                 "VisibilityPrivate",
@@ -437,7 +879,9 @@ const docTemplate = `{
                 7,
                 8,
                 9,
-                10
+                10,
+                11,
+                12
             ],
             "x-enum-varnames": [
                 "BadInput",
@@ -446,6 +890,8 @@ const docTemplate = `{
                 "BadPassword",
                 "BadUsername",
                 "BadDeviceName",
+                "BadDisplayname",
+                "BadEmail",
                 "UserAlreadyExists",
                 "InvalidLanguageFormat",
                 "TitleTooLong",
@@ -478,10 +924,32 @@ const docTemplate = `{
                 }
             }
         },
+        "route.changePasswordCredential": {
+            "type": "object",
+            "properties": {
+                "newPassword": {
+                    "type": "string"
+                },
+                "oldPassword": {
+                    "type": "string"
+                }
+            }
+        },
         "route.createNovelResult": {
             "type": "object",
             "properties": {
                 "novel_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "route.requiredCredential": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }
@@ -492,7 +960,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Light novel API",

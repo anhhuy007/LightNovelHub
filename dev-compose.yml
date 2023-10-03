@@ -4,7 +4,7 @@ services:
   app:
     image: 'golang:1.20'
     ports:
-      - 8080:8080
+      - "8080:8080"
     volumes:
       - .:/app
     working_dir: /app
@@ -18,7 +18,7 @@ services:
     env_file:
       - test.env
     ports:
-      - 3306:3306
+      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
 

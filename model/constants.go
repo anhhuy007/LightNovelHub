@@ -4,8 +4,8 @@ const (
 	IDBinLength = 16
 	IDHexLength = 32
 
-	UserNameMaxLength    = 32
-	UserNameMinLength    = 3
+	UsernameMaxLength    = 32
+	UsernameMinLength    = 3
 	PasswordMaxLength    = 72
 	PasswordMinLength    = 8
 	DisplayNameMaxLength = 64
@@ -24,6 +24,7 @@ const (
 	TagNameMinLength        = 2
 	TagDescriptionMaxLength = 300
 
+	DeviceNameMinLength = 0
 	DeviceNameMaxLength = 255
 )
 
@@ -51,8 +52,8 @@ func (n NovelStatusID) String() string {
 type VisibilityID int
 
 const (
-	VisibilityPrivate VisibilityID = 2
-	VisibilityPublic  VisibilityID = 1
+	VisibilityPrivate VisibilityID = 1
+	VisibilityPublic  VisibilityID = 2
 )
 
 func (v VisibilityID) String() string {

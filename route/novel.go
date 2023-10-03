@@ -11,18 +11,19 @@ import (
 	"unicode/utf8"
 )
 
-type createNovelResult struct {
-	NovelID string `json:"novel_id"`
-}
-
+// TODO: Delete novel
 func AddUploadRoutes(router *fiber.Router, db model.DB) {
 	novelRoute := (*router).Group("/novel")
 
 	novelRoute.Post("/create", createNovel(db))
 
-	novelRoute.Get("/:novelID", getNovel(db))
+	novelRoute.Post("/:novelID", getNovel(db))
 
 	novelRoute.Patch("/:novelID", updateNovelMetadata(db))
+
+	novelRoute.Delete("/:novelID", deleteNovel(db))
+
+	novelRoute.Post("/from/:userID", getUsersNovels(db))
 }
 
 // Get Novel
@@ -33,14 +34,18 @@ func AddUploadRoutes(router *fiber.Router, db model.DB) {
 //	@Produce		json
 //	@Param			NovelID	path		string	true	"Novel ID"
 //	@Success		200		{object}	model.NovelView
-//	@Failure		401
 //	@Failure		404
 //	@Failure		500
-//	@Router			/novel/:NovelID [GET]
+//	@Router			/novel/:novelID [POST]
 func getNovel(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		novelID := c.Params("novelID")
-		if len(novelID) != model.IDHexLength {
+		novelIDStr := c.Params("novelID")
+		log.Debug(novelIDStr)
+		if len(novelIDStr) != model.IDHexLength {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		novelID, err := Unhex(novelIDStr)
+		if err != nil {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 
@@ -62,7 +67,7 @@ func getNovel(db model.DB) fiber.Handler {
 				return c.SendStatus(fiber.StatusUnauthorized)
 			}
 
-			if bytes.Compare(session.UserID, novelView.Author.ID) != 0 {
+			if hex.EncodeToString(session.UserID) != novelView.Author.ID {
 				return c.SendStatus(fiber.StatusUnauthorized)
 			}
 		}
@@ -72,10 +77,14 @@ func getNovel(db model.DB) fiber.Handler {
 	}
 }
 
+type createNovelResult struct {
+	NovelID string `json:"novel_id"`
+}
+
 // Create Novel
 //
 //	@Summary		Create a new novel with the provided metadata, return the created novel id
-//	@Description	Possible error code: Missing field, Invalid language format, Title too long, Tagline too long
+//	@Description	Possible error code: MissingField, InvalidLanguageFormat, TitleTooLong, TaglineTooLong
 //	@Tags			novel
 //	@Accept			json
 //	@Produce		json
@@ -96,7 +105,7 @@ func createNovel(db model.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(BadInput))
 		}
 
-		if ok, code := CheckNovelMetadata(input); !ok {
+		if ok, code := checkNovelMetadata(input); !ok {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(code))
 		}
 
@@ -119,16 +128,19 @@ func createNovel(db model.DB) fiber.Handler {
 }
 
 // Update Novel Metadata
+//
 //	@Summary		Update the novel metadata with the provided metadata
-//	@Description	Possible error code: Missing field, Invalid language format, Title too long, Tagline too long
+//	@Description	Possible error code: MissingField, InvalidLanguageFormat, TitleTooLong, TaglineTooLong
 //	@Tags			novel
 //	@Accept			json
+//	@Param			NovelID			path	string				true	"Novel ID"
+//	@Param			NovelDetails	body	model.NovelMetadata	true	"Novel details"
 //	@Success		200
 //	@Failure		400	{object}	ErrorJSON
 //	@Failure		401
 //	@Failure		404
 //	@Failure		500
-
+//	@Router			/novel/:novelID [PATCH]
 func updateNovelMetadata(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if c.Locals(middleware.KeyIsUserAuth) == false {
@@ -141,12 +153,16 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(BadInput))
 		}
 
-		if ok, code := CheckNovelMetadata(input); !ok {
+		if ok, code := checkNovelMetadata(input); !ok {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(code))
 		}
 
-		novelID := c.Params("novelID")
-		if len(novelID) != model.IDHexLength {
+		novelIDStr := c.Params("novelID")
+		if len(novelIDStr) != model.IDHexLength {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		novelID, err := Unhex(novelIDStr)
+		if err != nil {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 
@@ -159,7 +175,7 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		ok = db.UpdateNovel(novelID, input)
+		ok = db.UpdateNovelMetadata(novelID, input)
 		if !ok {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -168,7 +184,81 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 	}
 }
 
-func CheckNovelMetadata(input model.NovelMetadata) (bool, ErrorCode) {
+// Get User's Novels
+//
+//	@Summary		Get all the novels from the user with the provided user id
+//	@Description	If the user is not logged in, only the public novels will be returned
+//	@Tags			novel
+//	@Produce		json
+//	@Param			UserID	path		string	true	"User ID"
+//	@Success		200		{object}	[]model.NovelMetadataSmall
+//	@Failure		401
+//	@Failure		404
+//	@Failure		500
+//	@Router			/novel/from/:userID [POST]
+func getUsersNovels(db model.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		userID := c.Params("userID")
+		if len(userID) != model.IDHexLength {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		uid, err := Unhex(userID)
+		if err != nil {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		novelsMetadataSmall := db.GetUsersNovels(uid)
+		return c.JSON(novelsMetadataSmall)
+	}
+}
+
+// Delete Novel
+//
+//	@Deprecated
+//	@Summary	Delete the novel and all the related stuff like volumes, chapters, comments, images with the provided novel id
+//	@Tags		novel
+//	@Param		NovelID	path	string	true	"Novel ID"
+//	@Success	200
+//	@Failure	401
+//	@Failure	404
+//	@Failure	500
+//	@Router		/novel/:novelID [DELETE]
+func deleteNovel(db model.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusNotImplemented)
+		//novelID := c.Params("novelID")
+		//if len(novelID) != model.IDHexLength {
+		//	return c.SendStatus(fiber.StatusNotFound)
+		//}
+		//
+		//if c.Locals(middleware.KeyIsUserAuth) == false {
+		//	return c.SendStatus(fiber.StatusUnauthorized)
+		//}
+		//
+		//session, ok := c.Locals(middleware.KeyUserSession).(model.Session)
+		//if !ok {
+		//	log.Warn("Check the authentication middleware")
+		//	return c.SendStatus(fiber.StatusInternalServerError)
+		//}
+		//
+		//novel, ok := db.GetNovel(novelID)
+		//if !ok {
+		//	return c.SendStatus(fiber.StatusNotFound)
+		//}
+		//
+		//if bytes.Compare(session.UserID, novel.Author) != 0 {
+		//	return c.SendStatus(fiber.StatusUnauthorized)
+		//}
+		//
+		//ok = db.DeleteNovel(novelID)
+		//if !ok {
+		//	return c.SendStatus(fiber.StatusInternalServerError)
+		//}
+		//
+		//return c.SendStatus(fiber.StatusOK)
+	}
+}
+
+func checkNovelMetadata(input model.NovelMetadata) (bool, ErrorCode) {
 	if matched, err := regexp.Match("^[a-z]{3}$", []byte(input.Language)); err != nil ||
 		matched == false {
 		return false, InvalidLanguageFormat

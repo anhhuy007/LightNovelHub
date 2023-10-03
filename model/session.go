@@ -1,7 +1,6 @@
 package model
 
 import (
-	"Lightnovel/utils"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -24,7 +23,7 @@ func (db *Database) CreateSession(
 	userID []byte,
 	deviceName string,
 ) (SessionInfo, bool) {
-	sessionID := utils.GetUUID()
+	sessionID := GetUUID()
 	expires := time.Now().Add(sessionDuration)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	_, err := db.db.ExecContext(
@@ -43,16 +42,15 @@ func (db *Database) CreateSession(
 	return SessionInfo{hex.EncodeToString(sessionID), expires}, true
 }
 
-func (db *Database) GetSession(sessionID string) (Session, bool) {
+func (db *Database) GetSession(sessionID []byte) (Session, bool) {
 	var session Session
-	sessionIDByte := utils.Unhex(sessionID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 
 	err := db.db.GetContext(
 		ctx,
 		&session,
 		"SELECT id, user_id, expires_at, device_name FROM sessions WHERE id = ?",
-		sessionIDByte,
+		sessionID,
 	)
 	cancel()
 
@@ -67,13 +65,12 @@ func (db *Database) GetSession(sessionID string) (Session, bool) {
 	return session, true
 }
 
-func (db *Database) DeleteSession(sessionID string) bool {
-	sessionIDByte := utils.Unhex(sessionID)
+func (db *Database) DeleteSession(sessionID []byte) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	_, err := db.db.ExecContext(
 		ctx,
 		"DELETE FROM sessions WHERE id = ?",
-		sessionIDByte,
+		sessionID,
 	)
 	cancel()
 	if err != nil {
@@ -96,18 +93,28 @@ func (db *Database) DeleteExpiredSessions() bool {
 	return true
 }
 
-func (db *Database) ExtendSessionLifetime(sessionID string) bool {
-	sessionIDByte := utils.Unhex(sessionID)
+func (db *Database) ExtendSessionLifetime(sessionID []byte) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	_, err := db.db.ExecContext(
 		ctx,
 		"UPDATE sessions SET expires_at = ? WHERE id = ?",
 		time.Now().Add(sessionDuration),
-		sessionIDByte,
+		sessionID,
 	)
 	cancel()
 	if err != nil {
 		log.Error(ctx.Err())
+		return false
+	}
+	return true
+}
+
+func (db *Database) DeletaAllSessions(userID []byte) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
+	_, err := db.db.ExecContext(ctx, "DELETE FROM sessions WHERE user_id = ?", userID)
+	cancel()
+	if err != nil {
+		log.Error(err)
 		return false
 	}
 	return true
