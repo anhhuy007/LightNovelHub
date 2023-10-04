@@ -15,15 +15,15 @@ type DB interface {
 	GetUserWithID(userID []byte) (User, bool)
 	GetUserMetadataSmall(userID []byte) (UserMetadataSmall, bool)
 	DeleteUser(userID []byte) bool
-	UpdateUserMetadata(userID []byte, args UserMetadata) bool
+	UpdateUserMetadata(userID []byte, args *UserMetadata) bool
 	UpdateUserPassword(userID []byte, newPassword []byte) bool
 
 	GetFollowedUser(userID []byte) []UserMetadataSmall
-	GetFollowedNovel(userID []byte) []NovelMetadataSmall
+	GetFollowedNovel(userID []byte, filtersAndSort *FiltersAndSort) []NovelMetadataSmall
 
-	CreateNovel(args NovelMetadata) ([]byte, bool)
+	CreateNovel(args *NovelMetadata) ([]byte, bool)
 	GetNovelView(novelID []byte) (NovelView, bool)
 	GetNovel(novelID []byte) (Novel, bool)
-	UpdateNovelMetadata(novelID []byte, args NovelMetadata) bool
-	GetUsersNovels(UserID []byte) []NovelMetadataSmall
+	UpdateNovelMetadata(novelID []byte, args *NovelMetadata) bool
+	GetUsersNovels(UserID []byte, filtersAndSort *FiltersAndSort, isSelf bool) []NovelMetadataSmall
 }

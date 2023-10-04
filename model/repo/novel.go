@@ -1,12 +1,14 @@
-package model
+package repo
 
 import (
+	"Lightnovel/model"
 	"context"
 	"encoding/hex"
+	"fmt"
 	"github.com/gofiber/fiber/v2/log"
 )
 
-func (db *Database) CreateNovel(args NovelMetadata) ([]byte, bool) {
+func (db *Database) CreateNovel(args *model.NovelMetadata) ([]byte, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	uid := GetUUID()
 	_, err := db.db.ExecContext(
@@ -29,8 +31,8 @@ func (db *Database) CreateNovel(args NovelMetadata) ([]byte, bool) {
 	return uid, true
 }
 
-func (db *Database) GetNovel(novelID []byte) (Novel, bool) {
-	var novel Novel
+func (db *Database) GetNovel(novelID []byte) (model.Novel, bool) {
+	var novel model.Novel
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(ctx, &novel, "SELECT * FROM novels WHERE id = ?", novelID)
 	cancel()
@@ -41,8 +43,8 @@ func (db *Database) GetNovel(novelID []byte) (Novel, bool) {
 	return novel, true
 }
 
-func (db *Database) getAuthor(authorID []byte) (UserView, bool) {
-	var user UserView
+func (db *Database) getAuthor(authorID []byte) (model.UserView, bool) {
+	var user model.UserView
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(
 		ctx,
@@ -58,8 +60,8 @@ func (db *Database) getAuthor(authorID []byte) (UserView, bool) {
 	return user, true
 }
 
-func (db *Database) getTags(novelID []byte) []TagView {
-	var tags []TagView
+func (db *Database) getTags(novelID []byte) []model.TagView {
+	var tags []model.TagView
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
@@ -74,7 +76,7 @@ func (db *Database) getTags(novelID []byte) []TagView {
 		cancel()
 	}()
 	for row.Next() {
-		var tagView TagView
+		var tagView model.TagView
 		err = row.StructScan(&tagView)
 		if err != nil {
 			log.Error(err)
@@ -102,18 +104,18 @@ func (db *Database) countVolume(novelID []byte) int {
 	return volumes
 }
 
-func (db *Database) GetNovelView(novelID []byte) (NovelView, bool) {
+func (db *Database) GetNovelView(novelID []byte) (model.NovelView, bool) {
 	novel, ok := db.GetNovel(novelID)
 	if !ok {
-		return NovelView{}, false
+		return model.NovelView{}, false
 	}
 
 	author, ok := db.GetUserMetadataSmall(novel.Author)
 	if !ok {
-		return NovelView{}, false
+		return model.NovelView{}, false
 	}
 
-	return NovelView{
+	return model.NovelView{
 		ID:          hex.EncodeToString(novelID),
 		Title:       novel.Title,
 		Tagline:     novel.Tagline,
@@ -136,7 +138,7 @@ func (db *Database) GetNovelView(novelID []byte) (NovelView, bool) {
 	}, true
 }
 
-func (db *Database) UpdateNovelMetadata(novelID []byte, args NovelMetadata) bool {
+func (db *Database) UpdateNovelMetadata(novelID []byte, args *model.NovelMetadata) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	_, err := db.db.ExecContext(
 		ctx,
@@ -158,13 +160,20 @@ func (db *Database) UpdateNovelMetadata(novelID []byte, args NovelMetadata) bool
 	return true
 }
 
-func (db *Database) GetUsersNovels(UserID []byte) []NovelMetadataSmall {
-	var novels []NovelMetadataSmall
+func (db *Database) GetUsersNovels(UserID []byte, filtersAndSort *model.FiltersAndSort, isSelf bool) []model.NovelMetadataSmall {
+	var novels []model.NovelMetadataSmall
+	query := "SELECT id, title, tagline, description, author, image, language, total_rating, rate_count, adult, status, visibility, views FROM novels WHERE author = ?"
+	if isSelf == false {
+		query += fmt.Sprintf(" AND visibility = %v", model.VisibilityPublic)
+	}
+	filtersAndSortString, filtersAndSortArgs := filtersAndSort.ConstructQuery()
+	query += filtersAndSortString
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
-		"SELECT id, title, tagline, description, author, image, language, total_rating, rate_count, adult, status, visibility, views FROM novels WHERE author = ?",
+		query,
 		UserID,
+		filtersAndSortArgs,
 	)
 	defer func() {
 		err := row.Close()
@@ -174,7 +183,7 @@ func (db *Database) GetUsersNovels(UserID []byte) []NovelMetadataSmall {
 		cancel()
 	}()
 	for row.Next() {
-		var novel NovelMetadataSmall
+		var novel model.NovelMetadataSmall
 		err = row.StructScan(&novel)
 		if err != nil {
 			log.Error(err)

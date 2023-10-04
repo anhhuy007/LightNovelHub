@@ -2,7 +2,7 @@ package main
 
 import (
 	"Lightnovel/middleware"
-	"Lightnovel/model"
+	"Lightnovel/model/repo"
 	"Lightnovel/route"
 	"context"
 	"github.com/go-sql-driver/mysql"
@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/jmoiron/sqlx"
 	"os"
 	"time"
@@ -27,7 +28,7 @@ func main() {
 			log.Error(err)
 		}
 	}()
-	database := model.NewDatabase(db, time.Minute)
+	database := repo.NewDatabase(db, time.Minute)
 
 	app := fiber.New()
 
@@ -47,7 +48,7 @@ func main() {
 	//}))
 
 	app.Use(logger.New(logger.ConfigDefault))
-
+	app.Get("/metrics", monitor.New())
 	authMiddleware := middleware.AuthenticationCheck(&database)
 	app.Use(authMiddleware)
 

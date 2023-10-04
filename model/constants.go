@@ -1,8 +1,14 @@
 package model
 
+import (
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/jmoiron/sqlx"
+	"time"
+)
+
 const (
 	IDBinLength = 16
-	IDHexLength = 32
+	IDHexLength = IDBinLength * 2
 
 	UsernameMaxLength    = 32
 	UsernameMinLength    = 3
@@ -65,4 +71,63 @@ func (v VisibilityID) String() string {
 	default:
 		return "Unknown"
 	}
+}
+
+type SortOrder string
+
+const (
+	SortOrderAsc  SortOrder = "ASC"
+	SortOrderDesc SortOrder = "DESC"
+)
+
+type OrderBy string
+
+const (
+	OrderByCreatedAt OrderBy = "created_at"
+	OrderByUpdateAt  OrderBy = "updated_at"
+	OrderByViews     OrderBy = "views"
+	OrderByTitle     OrderBy = "title"
+)
+
+type FiltersAndSort struct {
+	SortOrder  SortOrder
+	OrderBy    OrderBy
+	Adult      bool
+	Language   string
+	Tag        []int
+	TagExclude []int
+	Search     string
+	Page       uint
+	FromDate   time.Time
+	ToDate     time.Time
+	Status     NovelStatusID
+}
+
+var DefaultFiltersAndSort = FiltersAndSort{
+	SortOrder:  SortOrderDesc,
+	OrderBy:    OrderByCreatedAt,
+	Adult:      false,
+	Language:   "",
+	Tag:        []int{},
+	TagExclude: []int{},
+	Search:     "",
+	Page:       1,
+	FromDate:   time.Time{},
+	ToDate:     time.Time{},
+	Status:     NovelStatusID(0),
+}
+
+// Return the after WHERE clause to the end in the query.
+// The generated query will start with AND, if filter with tag, please join with table novel tags.
+// The query should be like this:
+// SELECT * FROM novels WHERE 1=1 ...{the generated query here}...
+// If the query has it own criteria, the query should be like this:
+// SELECT * FROM novels WHERE {query criteria here} ...{the generated query here}...
+func (f *FiltersAndSort) ConstructQuery() (string, []interface{}) {
+	resQuery, args, err := sqlx.Named(":value", f)
+	if err != nil {
+		log.Error(err)
+		return "", nil
+	}
+	return resQuery, args
 }

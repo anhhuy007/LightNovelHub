@@ -19,19 +19,14 @@ func Unhex(s string) ([]byte, error) {
 
 func AuthenticationCheck(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		body := map[string]string{}
+		var body model.IncludeSessionString
 		err := c.BodyParser(&body)
 		if err != nil {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()
 		}
 
-		sessionInfoStr, ok := body[BodySession]
-		if !ok {
-			c.Locals(KeyIsUserAuth, false)
-			return c.Next()
-		}
-		sessionInfo, err := Unhex(sessionInfoStr)
+		sessionInfo, err := Unhex(body.Session)
 		if err != nil {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()

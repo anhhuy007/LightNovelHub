@@ -23,7 +23,7 @@ func AddUploadRoutes(router *fiber.Router, db model.DB) {
 
 	novelRoute.Delete("/:novelID", deleteNovel(db))
 
-	novelRoute.Post("/from/:userID", getUsersNovels(db))
+	novelRoute.Post("/from/:userID", getUsersNovels(db)) //TODO: Add sort and pagination
 }
 
 // Get Novel
@@ -32,8 +32,9 @@ func AddUploadRoutes(router *fiber.Router, db model.DB) {
 //	@Description	If the novel is private, the user need to be logged in with the author account
 //	@Tags			novel
 //	@Produce		json
-//	@Param			NovelID	path		string	true	"Novel ID"
-//	@Success		200		{object}	model.NovelView
+//	@Param			NovelID			path		string						true	"Novel ID"
+//	@Param			sessionString	body		model.IncludeSessionString	false	"User's Session"
+//	@Success		200				{object}	model.NovelView
 //	@Failure		404
 //	@Failure		500
 //	@Router			/novel/:novelID [POST]
@@ -88,7 +89,8 @@ type createNovelResult struct {
 //	@Tags			novel
 //	@Accept			json
 //	@Produce		json
-//	@Param			NovelDetails	body		model.NovelMetadata	true	"Novel details"
+//	@Param			NovelDetails	body		model.NovelMetadata			true	"Novel details"
+//	@Param			sessionString	body		model.IncludeSessionString	true	"User's Session"
 //	@Success		201				{object}	createNovelResult
 //	@Failure		400				{object}	ErrorJSON
 //	@Failure		401
@@ -115,7 +117,7 @@ func createNovel(db model.DB) fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		input.Author = session.UserID
-		uid, ok := db.CreateNovel(input)
+		uid, ok := db.CreateNovel(&input)
 		if !ok {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -133,8 +135,9 @@ func createNovel(db model.DB) fiber.Handler {
 //	@Description	Possible error code: MissingField, InvalidLanguageFormat, TitleTooLong, TaglineTooLong
 //	@Tags			novel
 //	@Accept			json
-//	@Param			NovelID			path	string				true	"Novel ID"
-//	@Param			NovelDetails	body	model.NovelMetadata	true	"Novel details"
+//	@Param			NovelID			path	string						true	"Novel ID"
+//	@Param			NovelDetails	body	model.NovelMetadata			true	"Novel details"
+//	@Param			sessionString	body	model.IncludeSessionString	true	"User's Session"
 //	@Success		200
 //	@Failure		400	{object}	ErrorJSON
 //	@Failure		401
@@ -175,7 +178,7 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-		ok = db.UpdateNovelMetadata(novelID, input)
+		ok = db.UpdateNovelMetadata(novelID, &input)
 		if !ok {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -190,8 +193,10 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 //	@Description	If the user is not logged in, only the public novels will be returned
 //	@Tags			novel
 //	@Produce		json
-//	@Param			UserID	path		string	true	"User ID"
-//	@Success		200		{object}	[]model.NovelMetadataSmall
+//	@Param			UserID			path		string						true	"User ID"
+//	@Param			sessionString	body		model.IncludeSessionString	true	"User's Session"
+//	@Param			filtersAndSort	query		model.FiltersAndSort		false	"Filters and sorting options"
+//	@Success		200				{object}	[]model.NovelMetadataSmall
 //	@Failure		401
 //	@Failure		404
 //	@Failure		500
@@ -206,7 +211,15 @@ func getUsersNovels(db model.DB) fiber.Handler {
 		if err != nil {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
-		novelsMetadataSmall := db.GetUsersNovels(uid)
+		filtersAndSort := getFiltersAndSort(c)
+
+		isSelf := c.Locals(middleware.KeyIsUserAuth) == true
+		if isSelf {
+			session, _ := c.Locals(middleware.KeyUserSession).(model.Session)
+			isSelf = bytes.Compare(session.UserID, uid) == 0
+		}
+
+		novelsMetadataSmall := db.GetUsersNovels(uid, &filtersAndSort, isSelf)
 		return c.JSON(novelsMetadataSmall)
 	}
 }

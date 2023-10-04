@@ -30,9 +30,9 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 
 	accountRoute.Post("/self", getUserViewFromSession(db))
 
-	accountRoute.Post("/followed/users", getFollowedUser(db))
+	accountRoute.Post("/followed/users", getFollowedUser(db)) //TODO: Add sort and pagination
 
-	accountRoute.Post("/followed/novels", getFollowedNovel(db))
+	accountRoute.Post("/followed/novels", getFollowedNovel(db)) //TODO: Add sort and pagination
 }
 
 // Login
@@ -42,9 +42,9 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 //	@Tags			accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			credential	body		authCredentials	true	"User credentials"
-//	@Success		200			{object}	model.SessionInfo
-//	@Failure		400			{object}	ErrorJSON
+//	@Param			userCredential	body		authCredentials	true	"User credentials"
+//	@Success		200				{object}	model.SessionInfo
+//	@Failure		400				{object}	ErrorJSON
 //	@Failure		500
 //	@Router			/accounts/login [POST]
 func login(db model.DB) fiber.Handler {
@@ -89,9 +89,9 @@ func login(db model.DB) fiber.Handler {
 //	@Tags			accounts
 //	@Accept			json
 //	@Produce		json
-//	@Param			credential	body		authCredentials	true	"User credentials"
-//	@Success		201			{object}	model.SessionInfo
-//	@Failure		400			{object}	ErrorJSON
+//	@Param			userCredential	body		authCredentials	true	"User credentials"
+//	@Success		201				{object}	model.SessionInfo
+//	@Failure		400				{object}	ErrorJSON
 //	@Failure		500
 //	@Router			/accounts/register [POST]
 func register(db model.DB) fiber.Handler {
@@ -136,7 +136,7 @@ func register(db model.DB) fiber.Handler {
 //	@Summary	Log the user out
 //	@Tags		accounts
 //	@Accept		json
-//	@Param		credential	body	model.IncludeSessionString	true	"User credentials"
+//	@Param		sessionString	body	model.IncludeSessionString	true	"User credentials"
 //	@Success	200
 //	@Failure	400
 //	@Router		/accounts/logout [POST]
@@ -162,8 +162,8 @@ func logout(db model.DB) fiber.Handler {
 //	@Tags		accounts
 //	@Accept		json
 //	@Produce	json
-//	@Param		credential	body		model.IncludeSessionString	true	"User credentials"
-//	@Success	200			{object}	model.SessionInfo
+//	@Param		sessionString	body		model.IncludeSessionString	true	"User credentials"
+//	@Success	200				{object}	model.SessionInfo
 //	@Failure	400
 //	@Failure	401
 //	@Failure	500
@@ -203,7 +203,7 @@ func renew(db model.DB) fiber.Handler {
 //	@Description	Possible error: BadInput, BadPassword, BadUsername, UserNotFound
 //	@Tags			accounts
 //	@Accept			json
-//	@Param			credential	body	requiredCredential	true	"User credentials"
+//	@Param			userCredential	body	requiredCredential	true	"User credentials"
 //	@Success		200
 //	@Failure		400	{object}	ErrorJSON
 //	@Failure		500
@@ -246,7 +246,8 @@ func deleteUser(db model.DB) fiber.Handler {
 //	@Description	Possible error: BadInput, BadUsername, BadDisplayname, BadEmail, UserAlreadyExists
 //	@Tags			accounts
 //	@Accept			json
-//	@Param			credential	body	model.UserMetadata	true	"User metadata"
+//	@Param			sessionString	body	model.IncludeSessionString	true	"User credentials"
+//	@Param			metadata		body	model.UserMetadata			true	"User metadata"
 //	@Success		200
 //	@Failure		400	{object}	ErrorJSON
 //	@Failure		401
@@ -278,7 +279,7 @@ func updateUser(db model.DB) fiber.Handler {
 		if ok {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(UserAlreadyExists))
 		}
-		ok = db.UpdateUserMetadata(session.UserID, input)
+		ok = db.UpdateUserMetadata(session.UserID, &input)
 		if !ok {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -328,7 +329,8 @@ func (cr *changePasswordCredential) Validate() (bool, ErrorCode) {
 //	@Description	Possible error: BadInput, BadPassword, WrongPassword
 //	@Tags			accounts
 //	@Accept			json
-//	@Param			credential	body	changePasswordCredential	true	"Old and new password"
+//	@Param			credential		body	changePasswordCredential	true	"Old and new password"
+//	@Param			sessionString	body	model.IncludeSessionString	true	"User's session"
 //	@Success		200
 //	@Failure		400	{object}	ErrorJSON
 //	@Failure		401
@@ -379,7 +381,8 @@ func changeUserPassword(db model.DB) fiber.Handler {
 //	@Tags		accounts
 //	@Accept		json
 //	@Produce	json
-//	@Success	200	{object}	model.UserView
+//	@Param		sessionString	body		model.IncludeSessionString	true	"User's Session"
+//	@Success	200				{object}	model.UserView
 //	@Failure	401
 //	@Failure	500
 //	@Router		/accounts/self [POST]
@@ -408,7 +411,8 @@ func getUserViewFromSession(db model.DB) fiber.Handler {
 //	@Tags		accounts
 //	@Accept		json
 //	@Produce	json
-//	@Success	200	{object}	[]model.UserMetadataSmall
+//	@Param		sessionString	body		model.IncludeSessionString	true	"User's Session"
+//	@Success	200				{object}	[]model.UserMetadataSmall
 //	@Failure	401
 //	@Failure	500
 //	@Router		/accounts/followed/users [POST]
@@ -430,9 +434,12 @@ func getFollowedUser(db model.DB) fiber.Handler {
 //
 //	@Summary	Get user's followed novels
 //	@Tags		accounts
+//	@Params		credential body model.IncludeSessionString
 //	@Accept		json
 //	@Produce	json
-//	@Success	200	{object}	[]model.NovelMetadataSmall
+//	@Param		sessionString	body		model.IncludeSessionString	true	"User's Session"
+//	@Param		filtersAndSort	query		model.FiltersAndSort		false	"Filters and sorting options"
+//	@Success	200				{object}	[]model.NovelMetadataSmall
 //	@Failure	401
 //	@Failure	500
 //	@Router		/accounts/followed/novels [POST]
@@ -441,12 +448,13 @@ func getFollowedNovel(db model.DB) fiber.Handler {
 		if c.Locals(middleware.KeyIsUserAuth) == false {
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
+		filtersAndSort := getFiltersAndSort(c)
 		session, ok := c.Locals(middleware.KeyUserSession).(model.Session)
 		if !ok {
 			log.Warn("Check the authentication middleware")
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
-		return c.JSON(db.GetFollowedNovel(session.UserID))
+		return c.JSON(db.GetFollowedNovel(session.UserID, &filtersAndSort))
 	}
 }
 

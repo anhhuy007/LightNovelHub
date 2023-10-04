@@ -65,6 +65,15 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/route.changePasswordCredential"
                         }
+                    },
+                    {
+                        "description": "User's session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
                     }
                 ],
                 "responses": {
@@ -100,7 +109,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "User credentials",
-                        "name": "credential",
+                        "name": "userCredential",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -136,6 +145,110 @@ const docTemplate = `{
                     "accounts"
                 ],
                 "summary": "Get user's followed novels",
+                "parameters": [
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
+                    },
+                    {
+                        "type": "boolean",
+                        "name": "adult",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "fromDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "updated_at",
+                            "views",
+                            "title"
+                        ],
+                        "type": "string",
+                        "x-enum-varnames": [
+                            "OrderByCreatedAt",
+                            "OrderByUpdateAt",
+                            "OrderByViews",
+                            "OrderByTitle"
+                        ],
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "x-enum-varnames": [
+                            "SortOrderAsc",
+                            "SortOrderDesc"
+                        ],
+                        "name": "sortOrder",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "type": "integer",
+                        "x-enum-varnames": [
+                            "StatusOngoing",
+                            "StatusCompleted",
+                            "StatusDropped"
+                        ],
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "tag",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "tagExclude",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "toDate",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -167,6 +280,17 @@ const docTemplate = `{
                     "accounts"
                 ],
                 "summary": "Get user's followed users",
+                "parameters": [
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -202,7 +326,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "User credentials",
-                        "name": "credential",
+                        "name": "userCredential",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -241,7 +365,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "User credentials",
-                        "name": "credential",
+                        "name": "sessionString",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -275,7 +399,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "User credentials",
-                        "name": "credential",
+                        "name": "userCredential",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -317,7 +441,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "User credentials",
-                        "name": "credential",
+                        "name": "sessionString",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -356,6 +480,17 @@ const docTemplate = `{
                     "accounts"
                 ],
                 "summary": "Get user's metadata from session",
+                "parameters": [
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -384,8 +519,17 @@ const docTemplate = `{
                 "summary": "Update user's metadata",
                 "parameters": [
                     {
+                        "description": "User credentials",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
+                    },
+                    {
                         "description": "User metadata",
-                        "name": "credential",
+                        "name": "metadata",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -429,6 +573,14 @@ const docTemplate = `{
                         "name": "NovelID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
                     }
                 ],
                 "responses": {
@@ -501,6 +653,15 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/model.NovelMetadata"
                         }
+                    },
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
                     }
                 ],
                 "responses": {
@@ -547,6 +708,15 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/model.NovelMetadata"
                         }
+                    },
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
                     }
                 ],
                 "responses": {
@@ -588,6 +758,108 @@ const docTemplate = `{
                         "name": "UserID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "User's Session",
+                        "name": "sessionString",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IncludeSessionString"
+                        }
+                    },
+                    {
+                        "type": "boolean",
+                        "name": "adult",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "fromDate",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "updated_at",
+                            "views",
+                            "title"
+                        ],
+                        "type": "string",
+                        "x-enum-varnames": [
+                            "OrderByCreatedAt",
+                            "OrderByUpdateAt",
+                            "OrderByViews",
+                            "OrderByTitle"
+                        ],
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ASC",
+                            "DESC"
+                        ],
+                        "type": "string",
+                        "x-enum-varnames": [
+                            "SortOrderAsc",
+                            "SortOrderDesc"
+                        ],
+                        "name": "sortOrder",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            1,
+                            2,
+                            3
+                        ],
+                        "type": "integer",
+                        "x-enum-varnames": [
+                            "StatusOngoing",
+                            "StatusCompleted",
+                            "StatusDropped"
+                        ],
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "tag",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "tagExclude",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "toDate",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -770,6 +1042,21 @@ const docTemplate = `{
                 }
             }
         },
+        "model.OrderBy": {
+            "type": "string",
+            "enum": [
+                "created_at",
+                "updated_at",
+                "views",
+                "title"
+            ],
+            "x-enum-varnames": [
+                "OrderByCreatedAt",
+                "OrderByUpdateAt",
+                "OrderByViews",
+                "OrderByTitle"
+            ]
+        },
         "model.SessionInfo": {
             "type": "object",
             "properties": {
@@ -780,6 +1067,17 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "model.SortOrder": {
+            "type": "string",
+            "enum": [
+                "ASC",
+                "DESC"
+            ],
+            "x-enum-varnames": [
+                "SortOrderAsc",
+                "SortOrderDesc"
+            ]
         },
         "model.TagView": {
             "type": "object",

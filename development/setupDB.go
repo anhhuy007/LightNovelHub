@@ -2,6 +2,7 @@ package main
 
 import (
 	"Lightnovel/model"
+	"Lightnovel/model/repo"
 	"Lightnovel/route"
 	"context"
 	"database/sql"
@@ -47,7 +48,7 @@ func main() {
 	// INSERT MOCK DATA
 	users := []model.User{
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Username:    "Thong",
 			Displayname: sqlString("Thông Nguyễn"),
 			Password:    pwd("Thong12345"),
@@ -55,7 +56,7 @@ func main() {
 			Image:       "",
 		},
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Username:    "Huy",
 			Displayname: sqlString("Anh Huy"),
 			Password:    pwd("AnhHuy12345"),
@@ -63,7 +64,7 @@ func main() {
 			Image:       "https://images.unsplash.com/photo-1693143600183-85bd2f7c99e5?auto=format&fit=crop&w=2070&q=80",
 		},
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Username:    "Vu",
 			Displayname: sqlString("Anh Vũ"),
 			Password:    pwd("Guraa12345"),
@@ -109,7 +110,7 @@ func main() {
 
 	novels := []model.Novel{
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Title:       "Tensei Shitara Slime Datta Ken",
 			Tagline:     "That Time I Got Reincarnated as a Slime",
 			Description: "Some description",
@@ -123,7 +124,7 @@ func main() {
 			Clicks:      70,
 		},
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Title:       "Solo Leveling",
 			Tagline:     "Solo Leveling",
 			Description: "Some description",
@@ -137,7 +138,7 @@ func main() {
 			Clicks:      200,
 		},
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Title:       "The Beginning After the End",
 			Tagline:     "The Beginning After the End",
 			Description: "Some description",
@@ -151,7 +152,7 @@ func main() {
 			Clicks:      50,
 		},
 		{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			Title:       "The Legendary Moonlight Sculptor",
 			Tagline:     "The Legendary Moonlight Sculptor",
 			Description: "Some description",
@@ -212,7 +213,7 @@ func main() {
 	for i := 0; i < 3; i++ {
 		for j := 1; j <= 2; j++ {
 			volumes = append(volumes, model.Volume{
-				ID:          model.GetUUID(),
+				ID:          repo.GetUUID(),
 				NovelID:     novels[i].ID,
 				Title:       "Volume " + strconv.Itoa(j) + " of " + novels[i].Title,
 				Tagline:     "Tagline",
@@ -223,7 +224,7 @@ func main() {
 			})
 		}
 		volumes = append(volumes, model.Volume{
-			ID:          model.GetUUID(),
+			ID:          repo.GetUUID(),
 			NovelID:     novels[i].ID,
 			Title:       "Volume " + "3" + " of " + novels[i].Title,
 			Tagline:     "Tagline",
@@ -250,7 +251,7 @@ func main() {
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			chapters = append(chapters, model.Chapter{
-				ID:         model.GetUUID(),
+				ID:         repo.GetUUID(),
 				VolumeID:   volumes[i*3+j].ID,
 				Title:      "Chapter " + strconv.Itoa(j) + " of " + volumes[i*3+j].Title,
 				Content:    "# Content\n ## Content\n ### Content\n #### Content",
@@ -259,7 +260,7 @@ func main() {
 			})
 		}
 		chapters = append(chapters, model.Chapter{
-			ID:         model.GetUUID(),
+			ID:         repo.GetUUID(),
 			VolumeID:   volumes[i*3].ID,
 			Title:      "Chapter " + "3" + " of " + volumes[i*3].Title,
 			Content:    "# Content\n ## Content\n ### Content\n #### Content",
@@ -303,7 +304,7 @@ func main() {
 	var comments []model.Comment
 	for _, user := range users {
 		for _, novel := range novels {
-			id := model.GetUUID()
+			id := repo.GetUUID()
 			comments = append(comments, model.Comment{
 				ID:      id,
 				ToID:    novel.ID,
@@ -311,7 +312,7 @@ func main() {
 				Content: "**Comment** content",
 			})
 			comments = append(comments, model.Comment{
-				ID:      model.GetUUID(),
+				ID:      repo.GetUUID(),
 				ToID:    id,
 				UserID:  user.ID,
 				Content: "Commenting to a *comment*",
@@ -319,7 +320,7 @@ func main() {
 		}
 		for _, volume := range volumes {
 			comments = append(comments, model.Comment{
-				ID:      model.GetUUID(),
+				ID:      repo.GetUUID(),
 				ToID:    volume.ID,
 				UserID:  user.ID,
 				Content: "Comment *content*",
@@ -327,7 +328,7 @@ func main() {
 		}
 		for _, chapter := range chapters {
 			comments = append(comments, model.Comment{
-				ID:      model.GetUUID(),
+				ID:      repo.GetUUID(),
 				ToID:    chapter.ID,
 				UserID:  user.ID,
 				Content: "Comment content",

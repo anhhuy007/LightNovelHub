@@ -1,6 +1,7 @@
-package model
+package repo
 
 import (
+	"Lightnovel/model"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -10,19 +11,10 @@ import (
 
 var sessionDuration = time.Hour * 24 * 30
 
-type SessionInfo struct {
-	Session   string    `json:"session"`
-	ExpiredAt time.Time `json:"expired_at"`
-}
-
-type IncludeSessionString struct {
-	Session string `json:"session"`
-}
-
 func (db *Database) CreateSession(
 	userID []byte,
 	deviceName string,
-) (SessionInfo, bool) {
+) (model.SessionInfo, bool) {
 	sessionID := GetUUID()
 	expires := time.Now().Add(sessionDuration)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -37,13 +29,13 @@ func (db *Database) CreateSession(
 	cancel()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Error(err)
-		return SessionInfo{}, false
+		return model.SessionInfo{}, false
 	}
-	return SessionInfo{hex.EncodeToString(sessionID), expires}, true
+	return model.SessionInfo{hex.EncodeToString(sessionID), expires}, true
 }
 
-func (db *Database) GetSession(sessionID []byte) (Session, bool) {
-	var session Session
+func (db *Database) GetSession(sessionID []byte) (model.Session, bool) {
+	var session model.Session
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 
 	err := db.db.GetContext(
@@ -55,7 +47,7 @@ func (db *Database) GetSession(sessionID []byte) (Session, bool) {
 	cancel()
 
 	if err != nil {
-		return Session{}, false
+		return model.Session{}, false
 	}
 
 	if session.ExpireAt.Sub(time.Now()) < sessionDuration/3 {

@@ -4,6 +4,15 @@ import (
 	"time"
 )
 
+type SessionInfo struct {
+	Session   string    `json:"session"`
+	ExpiredAt time.Time `json:"expired_at"`
+}
+
+type IncludeSessionString struct {
+	Session string `json:"session"`
+}
+
 type UserView struct {
 	ID            string    `json:"id"`
 	Username      string    `json:"username"`

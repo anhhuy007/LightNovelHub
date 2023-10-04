@@ -4,9 +4,13 @@ import (
 	"Lightnovel/model"
 	"encoding/hex"
 	"fmt"
+	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 	"net/mail"
 	"regexp"
+	"strconv"
+	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -58,4 +62,45 @@ func checkUserMetadata(data model.UserMetadata) (bool, ErrorCode) {
 	}
 
 	return true, BadInput
+}
+
+func parseIntArray(nums string) []int {
+	var res []int
+	numStr := strings.Split(nums, ",")
+	for _, str := range numStr {
+		num, err := strconv.Atoi(str)
+		if err == nil {
+			res = append(res, num)
+		}
+	}
+	return res
+}
+
+func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSort {
+	fromDate, err := time.Parse(time.DateOnly, c.Query("from", ""))
+	if err != nil {
+		fromDate = model.DefaultFiltersAndSort.FromDate
+	}
+	toDate, err := time.Parse(time.DateOnly, c.Query("to", ""))
+	if err != nil {
+		toDate = model.DefaultFiltersAndSort.ToDate
+	}
+	pageQuery := c.QueryInt("page", 1)
+	page := model.DefaultFiltersAndSort.Page
+	if pageQuery > 1 {
+		page = uint(pageQuery)
+	}
+	return model.FiltersAndSort{
+		SortOrder:  model.SortOrder(c.Query("sortOrder", string(model.DefaultFiltersAndSort.SortOrder))),
+		OrderBy:    model.OrderBy(c.Query("orderBy", string(model.DefaultFiltersAndSort.OrderBy))),
+		Adult:      c.QueryBool("adult", model.DefaultFiltersAndSort.Adult),
+		Language:   c.Query("language", model.DefaultFiltersAndSort.Language),
+		Tag:        parseIntArray(c.Query("tag", "")),
+		TagExclude: parseIntArray(c.Query("tagExclude", "")),
+		Search:     c.Query("search", model.DefaultFiltersAndSort.Search),
+		Page:       page,
+		FromDate:   fromDate,
+		ToDate:     toDate,
+		Status:     model.NovelStatusID(c.QueryInt("status", int(model.DefaultFiltersAndSort.Status))),
+	}
 }

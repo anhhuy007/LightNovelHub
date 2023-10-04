@@ -1,6 +1,7 @@
-package model
+package repo
 
 import (
+	"Lightnovel/model"
 	"context"
 	"database/sql"
 	"encoding/hex"
@@ -27,8 +28,8 @@ func (db *Database) CreateUser(username string, password []byte) ([]byte, bool) 
 	return userId, true
 }
 
-func (db *Database) GetUser(username string) (User, bool) {
-	var user User
+func (db *Database) GetUser(username string) (model.User, bool) {
+	var user model.User
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(
 		ctx,
@@ -39,7 +40,7 @@ func (db *Database) GetUser(username string) (User, bool) {
 	cancel()
 	if err != nil {
 		log.Error(err)
-		return User{}, false
+		return model.User{}, false
 	}
 	return user, true
 }
@@ -61,12 +62,12 @@ func (db *Database) countUserNovel(userID []byte) int {
 	return novelCount
 }
 
-func (db *Database) GetUserView(username string) (UserView, bool) {
+func (db *Database) GetUserView(username string) (model.UserView, bool) {
 	user, ok := db.GetUser(username)
 	if !ok {
-		return UserView{}, false
+		return model.UserView{}, false
 	}
-	userView := UserView{
+	userView := model.UserView{
 		ID:            hex.EncodeToString(user.ID),
 		Username:      user.Username,
 		Displayname:   user.Displayname.String,
@@ -80,12 +81,12 @@ func (db *Database) GetUserView(username string) (UserView, bool) {
 	return userView, true
 }
 
-func (db *Database) GetUserViewWithID(userID []byte) (UserView, bool) {
+func (db *Database) GetUserViewWithID(userID []byte) (model.UserView, bool) {
 	user, ok := db.GetUserWithID(userID)
 	if !ok {
-		return UserView{}, false
+		return model.UserView{}, false
 	}
-	userView := UserView{
+	userView := model.UserView{
 		ID:            hex.EncodeToString(user.ID),
 		Username:      user.Username,
 		Displayname:   user.Displayname.String,
@@ -99,8 +100,8 @@ func (db *Database) GetUserViewWithID(userID []byte) (UserView, bool) {
 	return userView, true
 }
 
-func (db *Database) GetUserWithID(userID []byte) (User, bool) {
-	var user User
+func (db *Database) GetUserWithID(userID []byte) (model.User, bool) {
+	var user model.User
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = ?", userID)
 	cancel()
@@ -111,7 +112,7 @@ func (db *Database) GetUserWithID(userID []byte) (User, bool) {
 	return user, true
 }
 
-func (db *Database) GetUserMetadataSmall(userID []byte) (UserMetadataSmall, bool) {
+func (db *Database) GetUserMetadataSmall(userID []byte) (model.UserMetadataSmall, bool) {
 	var userMetadataSmall struct {
 		ID          []byte
 		Username    string
@@ -128,9 +129,9 @@ func (db *Database) GetUserMetadataSmall(userID []byte) (UserMetadataSmall, bool
 	cancel()
 	if err != nil {
 		log.Error(err)
-		return UserMetadataSmall{}, false
+		return model.UserMetadataSmall{}, false
 	}
-	return UserMetadataSmall{
+	return model.UserMetadataSmall{
 		ID:          hex.EncodeToString(userMetadataSmall.ID),
 		Username:    userMetadataSmall.Username,
 		Displayname: userMetadataSmall.Displayname.String,
@@ -153,7 +154,7 @@ func (db *Database) DeleteUser(userID []byte) bool {
 	return true
 }
 
-func (db *Database) UpdateUserMetadata(userID []byte, args UserMetadata) bool {
+func (db *Database) UpdateUserMetadata(userID []byte, args *model.UserMetadata) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	_, err := db.db.ExecContext(
 		ctx,
@@ -188,12 +189,12 @@ func (db *Database) UpdateUserPassword(userID []byte, newPassword []byte) bool {
 	return true
 }
 
-func (db *Database) GetFollowedUser(userID []byte) []UserMetadataSmall {
-	var users []UserMetadataSmall
+func (db *Database) GetFollowedUser(userID []byte) []model.UserMetadataSmall {
+	var users []model.UserMetadataSmall
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
-		"SELECT users.id, users.username, users.displayname, users.image FROM follows_user LEFT JOIN users ON follows_user.to_id = users.id WHERE from_id = ?",
+		"SELECT users.id, users.username, users.displayname, users.image FROM follows_user LEFT JOIN users ON follows_user.to_id = users.id WHERE from_id = ? ORDER BY users.username",
 		userID,
 	)
 	defer func() {
@@ -219,7 +220,7 @@ func (db *Database) GetFollowedUser(userID []byte) []UserMetadataSmall {
 			log.Error(err)
 			return users
 		}
-		users = append(users, UserMetadataSmall{
+		users = append(users, model.UserMetadataSmall{
 			ID:          hex.EncodeToString(userMetaSmallRaw.Id),
 			Username:    userMetaSmallRaw.Username,
 			Displayname: userMetaSmallRaw.Displayname.String,
@@ -229,14 +230,14 @@ func (db *Database) GetFollowedUser(userID []byte) []UserMetadataSmall {
 	return users
 }
 
-func (db *Database) GetFollowedNovel(userID []byte) []NovelMetadataSmall {
-	var novels []NovelMetadataSmall
+func (db *Database) GetFollowedNovel(userID []byte, filtersAndSort *model.FiltersAndSort) []model.NovelMetadataSmall {
+	var novels []model.NovelMetadataSmall
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
 		"SELECT novels.* FROM follows_novel LEFT JOIN novels ON follows_novel.novel_id = novels.id WHERE user_id = ? AND visibility = ?",
 		userID,
-		VisibilityPublic,
+		model.VisibilityPublic,
 	)
 	defer func() {
 		err := row.Close()
@@ -250,7 +251,7 @@ func (db *Database) GetFollowedNovel(userID []byte) []NovelMetadataSmall {
 		return novels
 	}
 	for row.Next() {
-		var novel Novel
+		var novel model.Novel
 		err := row.StructScan(&novel)
 		if err != nil {
 			log.Error(err)
@@ -260,7 +261,7 @@ func (db *Database) GetFollowedNovel(userID []byte) []NovelMetadataSmall {
 		if !ok {
 			return novels
 		}
-		novels = append(novels, NovelMetadataSmall{
+		novels = append(novels, model.NovelMetadataSmall{
 			ID:          hex.EncodeToString(novel.ID),
 			Title:       novel.Title,
 			Tagline:     novel.Tagline,

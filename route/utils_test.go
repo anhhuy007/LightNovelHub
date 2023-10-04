@@ -2,6 +2,7 @@ package route
 
 import (
 	"Lightnovel/model"
+	"reflect"
 	"testing"
 )
 
@@ -107,6 +108,28 @@ func Test_checkUserMetadata(t *testing.T) {
 			}
 			if got1 != tt.wantErr {
 				t.Errorf("checkUserMetadata() got1 = %v, want %v", got1, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_parseIntArray(t *testing.T) {
+	type args struct {
+		nums string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []int
+	}{
+		{"Good input", args{"1,2,3,4,5"}, []int{1, 2, 3, 4, 5}},
+		{"Bad input", args{"1,2,3,4,5a"}, []int{1, 2, 3, 4}},
+		{"Bad input in the middle", args{"1,2,3,4,5a,6,7,8,9"}, []int{1, 2, 3, 4, 6, 7, 8, 9}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseIntArray(tt.args.nums); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseIntArray() = %v, want %v", got, tt.want)
 			}
 		})
 	}
