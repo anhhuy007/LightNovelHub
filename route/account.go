@@ -5,34 +5,30 @@ import (
 	"Lightnovel/model"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
-// TODO: Delete User
+// TODO: Delete User, Search user by username
 func AddAccountRoutes(router *fiber.Router, db model.DB) {
 	accountRoute := (*router).Group("/accounts")
 
-	accountRoute.Post("/login", login(db))
+	accountRoute.Get("/:username", getUserView(db))
+	//accountRoute.Get("/find/:username", searchByUsername(db))
 
 	accountRoute.Post("/register", register(db))
-
+	accountRoute.Post("/login", login(db))
 	accountRoute.Post("/logout", logout(db))
-
 	accountRoute.Post("/renew", renew(db))
-
-	accountRoute.Delete("/:username", deleteUser(db))
+	accountRoute.Post("/changepassword", changeUserPassword(db))
+	accountRoute.Post("/self", getUserViewFromSession(db))
+	accountRoute.Post("/followed/users", getFollowedUser(db))
+	accountRoute.Post("/followed/novels", getFollowedNovel(db))
 
 	accountRoute.Patch("/update", updateUser(db))
 
-	accountRoute.Get("/:username", getUserView(db))
-
-	accountRoute.Post("/changepassword", changeUserPassword(db))
-
-	accountRoute.Post("/self", getUserViewFromSession(db))
-
-	accountRoute.Post("/followed/users", getFollowedUser(db)) //TODO: Add sort and pagination
-
-	accountRoute.Post("/followed/novels", getFollowedNovel(db)) //TODO: Add sort and pagination
+	accountRoute.Delete("/:username", deleteUser(db))
 }
 
 // Login
@@ -438,7 +434,7 @@ func getFollowedUser(db model.DB) fiber.Handler {
 //	@Accept		json
 //	@Produce	json
 //	@Param		sessionString	body		model.IncludeSessionString	true	"User's Session"
-//	@Param		filtersAndSort	query		model.FiltersAndSort		false	"Filters and sorting options"
+//	@Param		filtersAndSort	query		model.FiltersAndSortNovel		false	"Filters and sorting options"
 //	@Success	200				{object}	[]model.NovelMetadataSmall
 //	@Failure	401
 //	@Failure	500
@@ -464,6 +460,10 @@ type requiredCredential struct {
 }
 
 func (rc *requiredCredential) Validate() (bool, ErrorCode) {
+	rc.Username = strings.TrimFunc(rc.Username, func(r rune) bool {
+		return !unicode.IsPrint(r)
+	})
+	log.Error(rc.Username)
 	if IsUsernameValid(rc.Username) == false {
 		return false, BadUsername
 	}
@@ -481,6 +481,9 @@ type authCredentials struct {
 }
 
 func (ac *authCredentials) Validate() (bool, ErrorCode) {
+	ac.DeviceName = strings.TrimFunc(ac.DeviceName, func(r rune) bool {
+		return !unicode.IsPrint(r)
+	})
 	if utf8.RuneCountInString(ac.DeviceName) > model.DeviceNameMaxLength {
 		return false, BadDeviceName
 	}

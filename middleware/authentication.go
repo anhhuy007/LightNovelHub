@@ -17,11 +17,11 @@ func Unhex(s string) ([]byte, error) {
 	return hex.DecodeString(s[:model.IDHexLength])
 }
 
-func AuthenticationCheck(db model.DB) fiber.Handler {
+func AddAuthenticationCheck(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var body model.IncludeSessionString
 		err := c.BodyParser(&body)
-		if err != nil {
+		if err != nil || len(body.Session) != model.IDHexLength {
 			c.Locals(KeyIsUserAuth, false)
 			return c.Next()
 		}

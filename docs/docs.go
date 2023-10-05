@@ -741,7 +741,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/novel/from/:userID": {
+        "/novel/from/:username": {
             "post": {
                 "description": "If the user is not logged in, only the public novels will be returned",
                 "produces": [
@@ -754,8 +754,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "User ID",
-                        "name": "UserID",
+                        "description": "username",
+                        "name": "username",
                         "in": "path",
                         "required": true
                     },

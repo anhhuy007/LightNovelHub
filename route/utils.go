@@ -76,7 +76,7 @@ func parseIntArray(nums string) []int {
 	return res
 }
 
-func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSort {
+func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSortNovel {
 	fromDate, err := time.Parse(time.DateOnly, c.Query("from", ""))
 	if err != nil {
 		fromDate = model.DefaultFiltersAndSort.FromDate
@@ -90,9 +90,18 @@ func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSort {
 	if pageQuery > 1 {
 		page = uint(pageQuery)
 	}
-	return model.FiltersAndSort{
-		SortOrder:  model.SortOrder(c.Query("sortOrder", string(model.DefaultFiltersAndSort.SortOrder))),
-		OrderBy:    model.OrderBy(c.Query("orderBy", string(model.DefaultFiltersAndSort.OrderBy))),
+	orderBy := model.OrderBy(c.Query("orderBy", ""))
+	if !orderBy.Validate() {
+		orderBy = model.DefaultFiltersAndSort.OrderBy
+	}
+	sortOrder := model.SortOrder(c.Query("sortOrder", ""))
+	if !sortOrder.Validate() {
+		sortOrder = model.DefaultFiltersAndSort.SortOrder
+	}
+
+	return model.FiltersAndSortNovel{
+		SortOrder:  sortOrder,
+		OrderBy:    orderBy,
 		Adult:      c.QueryBool("adult", model.DefaultFiltersAndSort.Adult),
 		Language:   c.Query("language", model.DefaultFiltersAndSort.Language),
 		Tag:        parseIntArray(c.Query("tag", "")),
@@ -101,6 +110,8 @@ func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSort {
 		Page:       page,
 		FromDate:   fromDate,
 		ToDate:     toDate,
-		Status:     model.NovelStatusID(c.QueryInt("status", int(model.DefaultFiltersAndSort.Status))),
+		Status: model.NovelStatusID(
+			c.QueryInt("status", int(model.DefaultFiltersAndSort.Status)),
+		),
 	}
 }

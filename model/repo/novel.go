@@ -13,7 +13,9 @@ func (db *Database) CreateNovel(args *model.NovelMetadata) ([]byte, bool) {
 	uid := GetUUID()
 	_, err := db.db.ExecContext(
 		ctx,
-		"INSERT INTO novels (id, title, tagline, description, author, image, language, visibility) VALUES (?,?,?,?,?,?,?,?)",
+		`INSERT INTO novels 
+        (id, title, tagline, description, author, image, language, visibility) 
+		VALUES (?,?,?,?,?,?,?,?)`,
 		uid,
 		args.Title,
 		args.Tagline,
@@ -49,7 +51,9 @@ func (db *Database) getAuthor(authorID []byte) (model.UserView, bool) {
 	err := db.db.GetContext(
 		ctx,
 		&user,
-		"SELECT id, username, displayname, image, created_at FROM users WHERE id = ?",
+		`SELECT id, username, displayname, image, created_at 
+		FROM users 
+		WHERE id = ?`,
 		authorID,
 	)
 	cancel()
@@ -65,7 +69,10 @@ func (db *Database) getTags(novelID []byte) []model.TagView {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
-		"SELECT id, name FROM novel_tags LEFT JOIN tags on tags.id = novel_tags.tag_id WHERE novel_tags.novel_id = ?",
+		`SELECT id, name 
+		FROM novel_tags LEFT JOIN tags 
+		ON tags.id = novel_tags.tag_id 
+		WHERE novel_tags.novel_id = ?`,
 		novelID,
 	)
 	defer func() {
@@ -93,8 +100,11 @@ func (db *Database) countVolume(novelID []byte) int {
 	err := db.db.GetContext(
 		ctx,
 		&volumes,
-		"SELECT COUNT(*) FROM volumes LEFT JOIN visibility ON volumes.visibility = visibility.id WHERE novel_id = ? AND visibility.name = 'PUB'",
+		`SELECT COUNT(*) 
+		FROM volumes
+		WHERE novel_id = ? AND visibility = ?`,
 		novelID,
+		model.VisibilityPublic,
 	)
 	cancel()
 	if err != nil {
@@ -142,7 +152,10 @@ func (db *Database) UpdateNovelMetadata(novelID []byte, args *model.NovelMetadat
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	_, err := db.db.ExecContext(
 		ctx,
-		"UPDATE novels SET title = ?, tagline = ?, description = ?, image = ?, language = ?, visibility = ?, status = ? WHERE id = ?",
+		`UPDATE novels 
+		SET title = ?, tagline = ?, description = ?, image = ?, 
+		    language = ?, visibility = ?, status = ? 
+		WHERE id = ?`,
 		args.Title,
 		args.Tagline,
 		args.Description,
@@ -160,20 +173,32 @@ func (db *Database) UpdateNovelMetadata(novelID []byte, args *model.NovelMetadat
 	return true
 }
 
-func (db *Database) GetUsersNovels(UserID []byte, filtersAndSort *model.FiltersAndSort, isSelf bool) []model.NovelMetadataSmall {
+func (db *Database) GetUsersNovels(
+	userID []byte,
+	filtersAndSort *model.FiltersAndSortNovel,
+	isSelf bool,
+) []model.NovelMetadataSmall {
 	var novels []model.NovelMetadataSmall
-	query := "SELECT id, title, tagline, description, author, image, language, total_rating, rate_count, adult, status, visibility, views FROM novels WHERE author = ?"
+	filtersAndSortString, filtersAndSortArgs := filtersAndSort.ConstructQuery()
+	// ERROR: Add tag
+	query := `
+		SELECT novels.* 
+		FROM novels WHERE author = ?`
 	if isSelf == false {
 		query += fmt.Sprintf(" AND visibility = %v", model.VisibilityPublic)
 	}
-	filtersAndSortString, filtersAndSortArgs := filtersAndSort.ConstructQuery()
 	query += filtersAndSortString
+
+	args := []interface{}{userID}
+	if filtersAndSortArgs != nil {
+		args = append(args, filtersAndSortArgs...)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
 		query,
-		UserID,
-		filtersAndSortArgs,
+		args...,
 	)
 	defer func() {
 		err := row.Close()
@@ -182,14 +207,36 @@ func (db *Database) GetUsersNovels(UserID []byte, filtersAndSort *model.FiltersA
 		}
 		cancel()
 	}()
+	if err != nil {
+		log.Error(err)
+		return novels
+	}
 	for row.Next() {
-		var novel model.NovelMetadataSmall
-		err = row.StructScan(&novel)
+		var novel model.Novel
+		err := row.StructScan(&novel)
 		if err != nil {
 			log.Error(err)
 			return novels
 		}
-		novels = append(novels, novel)
+		authorMetadataSmall, ok := db.GetUserMetadataSmall(userID)
+		if !ok {
+			return novels
+		}
+		novels = append(novels, model.NovelMetadataSmall{
+			ID:          hex.EncodeToString(novel.ID),
+			Title:       novel.Title,
+			Tagline:     novel.Tagline,
+			Description: novel.Description,
+			Author:      authorMetadataSmall,
+			Image:       novel.Image,
+			Language:    novel.Language,
+			TotalRating: novel.TotalRating,
+			RateCount:   novel.RateCount,
+			Adult:       novel.Adult,
+			Status:      novel.Status.String(),
+			Visibility:  novel.Visibility.String(),
+			Views:       novel.Views,
+		})
 	}
 	return novels
 }

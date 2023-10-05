@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jmoiron/sqlx"
 	"time"
@@ -32,9 +33,13 @@ const (
 
 	DeviceNameMinLength = 0
 	DeviceNameMaxLength = 255
+
+	PageSize = 20
 )
 
 type NovelStatusID int
+
+const Unknown string = "Unknown"
 
 const (
 	StatusOngoing   NovelStatusID = 1
@@ -51,7 +56,7 @@ func (n NovelStatusID) String() string {
 	case StatusDropped:
 		return "Dropped"
 	default:
-		return "Unknown"
+		return Unknown
 	}
 }
 
@@ -69,7 +74,7 @@ func (v VisibilityID) String() string {
 	case VisibilityPrivate:
 		return "PRI"
 	default:
-		return "Unknown"
+		return Unknown
 	}
 }
 
@@ -80,6 +85,13 @@ const (
 	SortOrderDesc SortOrder = "DESC"
 )
 
+func (order SortOrder) Validate() bool {
+	if order != SortOrderDesc && order != SortOrderAsc {
+		return false
+	}
+	return true
+}
+
 type OrderBy string
 
 const (
@@ -89,21 +101,31 @@ const (
 	OrderByTitle     OrderBy = "title"
 )
 
-type FiltersAndSort struct {
-	SortOrder  SortOrder
-	OrderBy    OrderBy
+func (order OrderBy) Validate() bool {
+	if order != OrderByTitle &&
+		order != OrderByCreatedAt &&
+		order != OrderByViews &&
+		order != OrderByUpdateAt {
+		return false
+	}
+	return true
+}
+
+type FiltersAndSortNovel struct {
+	SortOrder  SortOrder `db:"sort_order"`
+	OrderBy    OrderBy   `db:"order_by"`
 	Adult      bool
 	Language   string
 	Tag        []int
-	TagExclude []int
+	TagExclude []int `db:"tag_exclude"`
 	Search     string
 	Page       uint
-	FromDate   time.Time
-	ToDate     time.Time
+	FromDate   time.Time `db:"from_date"`
+	ToDate     time.Time `db:"to_date"`
 	Status     NovelStatusID
 }
 
-var DefaultFiltersAndSort = FiltersAndSort{
+var DefaultFiltersAndSort = FiltersAndSortNovel{
 	SortOrder:  SortOrderDesc,
 	OrderBy:    OrderByCreatedAt,
 	Adult:      false,
@@ -118,16 +140,61 @@ var DefaultFiltersAndSort = FiltersAndSort{
 }
 
 // Return the after WHERE clause to the end in the query.
-// The generated query will start with AND, if filter with tag, please join with table novel tags.
+// The generated query will start with AND, if filter with tag,
+// please join with table novel tags like this:
+// SELECT * FROM (SELECT
+//
+//	novels.*,
+//	GROUP_CONCAT(tag_id) as tag_groupconcat
+//
+// FROM novels
+//
+//	RIGHT JOIN novel_tags
+//	           ON novels.id = novel_tags.novel_id
+//
+// GROUP BY novels.id) AS T
+// WHERE {query criteria}
 // The query should be like this:
 // SELECT * FROM novels WHERE 1=1 ...{the generated query here}...
 // If the query has it own criteria, the query should be like this:
 // SELECT * FROM novels WHERE {query criteria here} ...{the generated query here}...
-func (f *FiltersAndSort) ConstructQuery() (string, []interface{}) {
-	resQuery, args, err := sqlx.Named(":value", f)
+func (f *FiltersAndSortNovel) ConstructQuery() (string, []interface{}) {
+	res := ""
+	if f.Adult == false {
+		res += " AND novels.adult IS FALSE"
+	}
+	if f.Status.String() != Unknown {
+		res += " AND novels.status = :status"
+	}
+	if f.Search != DefaultFiltersAndSort.Search {
+		res += " AND (MATCH (novels.title) AGAINST (:search IN NATURAL LANGUAGE MODE))"
+	}
+	if f.Language != DefaultFiltersAndSort.Language {
+		res += " AND novels.language LIKE :language"
+	}
+	if f.FromDate != DefaultFiltersAndSort.FromDate {
+		res += " AND novels.created_at >= :from_date"
+	}
+	if f.ToDate != DefaultFiltersAndSort.ToDate {
+		res += " AND novels.created_at <= :to_date"
+	}
+	for _, tag := range f.Tag {
+		res += fmt.Sprintf(" AND FIND_IN_SET(%v, tag_groupconcat)", tag)
+	}
+	for _, tag := range f.TagExclude {
+		res += fmt.Sprintf(" AND FIND_IN_SET(%v, tag_groupconcat) = 0", tag)
+	}
+	// Maybe a redundant, but who knows?
+	if !f.SortOrder.Validate() {
+		f.SortOrder = DefaultFiltersAndSort.SortOrder
+	}
+	res += fmt.Sprintf(" ORDER BY :order_by %v, novels.id ASC", f.SortOrder)
+	res += fmt.Sprintf(" LIMIT %v OFFSET %v", PageSize*f.Page, PageSize*(f.Page-1))
+	resQuery, args, err := sqlx.Named(res, f)
 	if err != nil {
 		log.Error(err)
 		return "", nil
 	}
+	//log.Debug(resQuery)
 	return resQuery, args
 }

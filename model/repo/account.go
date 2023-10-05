@@ -194,7 +194,12 @@ func (db *Database) GetFollowedUser(userID []byte) []model.UserMetadataSmall {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
-		"SELECT users.id, users.username, users.displayname, users.image FROM follows_user LEFT JOIN users ON follows_user.to_id = users.id WHERE from_id = ? ORDER BY users.username",
+		`SELECT 
+    			users.id, users.username, users.displayname, users.image 
+		FROM follows_user LEFT JOIN users 
+		ON follows_user.to_id = users.id 
+		WHERE from_id = ? 
+		ORDER BY users.username`,
 		userID,
 	)
 	defer func() {
@@ -230,15 +235,32 @@ func (db *Database) GetFollowedUser(userID []byte) []model.UserMetadataSmall {
 	return users
 }
 
-func (db *Database) GetFollowedNovel(userID []byte, filtersAndSort *model.FiltersAndSort) []model.NovelMetadataSmall {
+func (db *Database) GetFollowedNovel(
+	userID []byte,
+	filtersAndSort *model.FiltersAndSortNovel,
+) []model.NovelMetadataSmall {
 	var novels []model.NovelMetadataSmall
+	filtersAndSortString, filtersAndSortArgs := filtersAndSort.ConstructQuery()
+	// ERROR: Add tags
+	query := `
+		SELECT novels.* 
+		FROM follows_novel LEFT JOIN novels 
+		ON follows_novel.novel_id = novels.id 
+		WHERE user_id = ? AND visibility = ?
+    ` + filtersAndSortString
+
+	args := []interface{}{userID, model.VisibilityPublic}
+	if filtersAndSortArgs != nil {
+		args = append(args, filtersAndSortArgs...)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	row, err := db.db.QueryxContext(
 		ctx,
-		"SELECT novels.* FROM follows_novel LEFT JOIN novels ON follows_novel.novel_id = novels.id WHERE user_id = ? AND visibility = ?",
-		userID,
-		model.VisibilityPublic,
+		query,
+		args...,
 	)
+
 	defer func() {
 		err := row.Close()
 		if err != nil {

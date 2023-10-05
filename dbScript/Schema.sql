@@ -52,11 +52,11 @@ CREATE TABLE novels
     views        INT           NOT NULL DEFAULT 0,
     clicks       INT           NOT NULL DEFAULT 0,
     adult        BOOLEAN       NOT NULL DEFAULT FALSE,
-    status_id    INT           NOT NULL DEFAULT 1,
+    status       INT           NOT NULL DEFAULT 1,
     visibility   INT           NOT NULL DEFAULT 1
 );
 
-CREATE INDEX novels_title_index ON novels (title);
+CREATE FULLTEXT INDEX novels_title_FTS_index ON novels (title);
 CREATE INDEX novels_author_index ON novels (author);
 CREATE INDEX novels_status_id_index ON novels (status);
 
@@ -146,7 +146,7 @@ CREATE TABLE follows_user
 
 CREATE TABLE follows_novel
 (
-    user_id BINARY(16) NOT NULL,
+    user_id  BINARY(16) NOT NULL,
     novel_id BINARY(16) NOT NULL,
     PRIMARY KEY (user_id, novel_id)
 );

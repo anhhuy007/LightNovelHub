@@ -19,11 +19,15 @@ type DB interface {
 	UpdateUserPassword(userID []byte, newPassword []byte) bool
 
 	GetFollowedUser(userID []byte) []UserMetadataSmall
-	GetFollowedNovel(userID []byte, filtersAndSort *FiltersAndSort) []NovelMetadataSmall
+	GetFollowedNovel(userID []byte, filtersAndSort *FiltersAndSortNovel) []NovelMetadataSmall
 
 	CreateNovel(args *NovelMetadata) ([]byte, bool)
 	GetNovelView(novelID []byte) (NovelView, bool)
 	GetNovel(novelID []byte) (Novel, bool)
 	UpdateNovelMetadata(novelID []byte, args *NovelMetadata) bool
-	GetUsersNovels(UserID []byte, filtersAndSort *FiltersAndSort, isSelf bool) []NovelMetadataSmall
+	GetUsersNovels(
+		userID []byte,
+		filtersAndSort *FiltersAndSortNovel,
+		isSelf bool,
+	) []NovelMetadataSmall
 }

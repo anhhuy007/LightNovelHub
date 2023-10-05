@@ -741,13 +741,13 @@ paths:
         id
       tags:
       - novel
-  /novel/from/:userID:
+  /novel/from/:username:
     post:
       description: If the user is not logged in, only the public novels will be returned
       parameters:
-      - description: User ID
+      - description: username
         in: path
-        name: UserID
+        name: username
         required: true
         type: string
       - description: User's Session

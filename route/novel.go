@@ -15,15 +15,15 @@ import (
 func AddUploadRoutes(router *fiber.Router, db model.DB) {
 	novelRoute := (*router).Group("/novel")
 
-	novelRoute.Post("/create", createNovel(db))
+	//novelRoute.Get("/find", searchAndFilterNovel(db))
 
+	novelRoute.Post("/create", createNovel(db))
 	novelRoute.Post("/:novelID", getNovel(db))
+	novelRoute.Post("/from/:username", getUsersNovels(db)) //TODO: Add sort and pagination
 
 	novelRoute.Patch("/:novelID", updateNovelMetadata(db))
 
 	novelRoute.Delete("/:novelID", deleteNovel(db))
-
-	novelRoute.Post("/from/:userID", getUsersNovels(db)) //TODO: Add sort and pagination
 }
 
 // Get Novel
@@ -107,7 +107,7 @@ func createNovel(db model.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(BadInput))
 		}
 
-		if ok, code := checkNovelMetadata(input); !ok {
+		if ok, code := checkNovelMetadata(&input); !ok {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(code))
 		}
 
@@ -156,7 +156,7 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(BadInput))
 		}
 
-		if ok, code := checkNovelMetadata(input); !ok {
+		if ok, code := checkNovelMetadata(&input); !ok {
 			return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(code))
 		}
 
@@ -193,22 +193,22 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 //	@Description	If the user is not logged in, only the public novels will be returned
 //	@Tags			novel
 //	@Produce		json
-//	@Param			UserID			path		string						true	"User ID"
+//	@Param			username			path		string						true	"username"
 //	@Param			sessionString	body		model.IncludeSessionString	true	"User's Session"
-//	@Param			filtersAndSort	query		model.FiltersAndSort		false	"Filters and sorting options"
+//	@Param			filtersAndSort	query		model.FiltersAndSortNovel		false	"Filters and sorting options"
 //	@Success		200				{object}	[]model.NovelMetadataSmall
 //	@Failure		401
 //	@Failure		404
 //	@Failure		500
-//	@Router			/novel/from/:userID [POST]
+//	@Router			/novel/from/:username [POST]
 func getUsersNovels(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userID := c.Params("userID")
-		if len(userID) != model.IDHexLength {
+		username := c.Params("username")
+		if !IsUsernameValid(username) {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
-		uid, err := Unhex(userID)
-		if err != nil {
+		user, ok := db.GetUser(username)
+		if !ok {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
 		filtersAndSort := getFiltersAndSort(c)
@@ -216,10 +216,10 @@ func getUsersNovels(db model.DB) fiber.Handler {
 		isSelf := c.Locals(middleware.KeyIsUserAuth) == true
 		if isSelf {
 			session, _ := c.Locals(middleware.KeyUserSession).(model.Session)
-			isSelf = bytes.Compare(session.UserID, uid) == 0
+			isSelf = bytes.Compare(session.UserID, user.ID) == 0
 		}
 
-		novelsMetadataSmall := db.GetUsersNovels(uid, &filtersAndSort, isSelf)
+		novelsMetadataSmall := db.GetUsersNovels(user.ID, &filtersAndSort, isSelf)
 		return c.JSON(novelsMetadataSmall)
 	}
 }
@@ -271,7 +271,7 @@ func deleteNovel(db model.DB) fiber.Handler {
 	}
 }
 
-func checkNovelMetadata(input model.NovelMetadata) (bool, ErrorCode) {
+func checkNovelMetadata(input *model.NovelMetadata) (bool, ErrorCode) {
 	if matched, err := regexp.Match("^[a-z]{3}$", []byte(input.Language)); err != nil ||
 		matched == false {
 		return false, InvalidLanguageFormat

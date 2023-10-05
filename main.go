@@ -11,8 +11,10 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
+	recover2 "github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/jmoiron/sqlx"
 	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -31,6 +33,14 @@ func main() {
 	database := repo.NewDatabase(db, time.Minute)
 
 	app := fiber.New()
+	app.Use(recover2.New(recover2.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e interface{}) {
+			log.Error(c.OriginalURL())
+			log.Error(e)
+			log.Error(string(debug.Stack()))
+		},
+	}))
 
 	//file, err := os.Create(fmt.Sprintf("logs/%v.txt", time.Now().Format("2006-01-02-15-04-05")))
 	//if err != nil {
@@ -49,7 +59,8 @@ func main() {
 
 	app.Use(logger.New(logger.ConfigDefault))
 	app.Get("/metrics", monitor.New())
-	authMiddleware := middleware.AuthenticationCheck(&database)
+
+	authMiddleware := middleware.AddAuthenticationCheck(&database)
 	app.Use(authMiddleware)
 
 	swaggerRoute := app.Group("/swagger")
