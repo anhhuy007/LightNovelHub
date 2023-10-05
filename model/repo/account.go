@@ -81,8 +81,8 @@ func (db *Database) GetUserView(username string) (model.UserView, bool) {
 	return userView, true
 }
 
-func (db *Database) GetUserViewWithID(userID []byte) (model.UserView, bool) {
-	user, ok := db.GetUserWithID(userID)
+func (db *Database) GetUserViewByID(userID []byte) (model.UserView, bool) {
+	user, ok := db.GetUserByID(userID)
 	if !ok {
 		return model.UserView{}, false
 	}
@@ -100,7 +100,7 @@ func (db *Database) GetUserViewWithID(userID []byte) (model.UserView, bool) {
 	return userView, true
 }
 
-func (db *Database) GetUserWithID(userID []byte) (model.User, bool) {
+func (db *Database) GetUserByID(userID []byte) (model.User, bool) {
 	var user model.User
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	err := db.db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = ?", userID)
@@ -189,6 +189,13 @@ func (db *Database) UpdateUserPassword(userID []byte, newPassword []byte) bool {
 	return true
 }
 
+type UserMetadatSmallRaw struct {
+	Id          []byte
+	Username    string
+	Displayname sql.NullString
+	Image       string
+}
+
 func (db *Database) GetFollowedUser(userID []byte) []model.UserMetadataSmall {
 	var users []model.UserMetadataSmall
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
@@ -214,12 +221,7 @@ func (db *Database) GetFollowedUser(userID []byte) []model.UserMetadataSmall {
 		return users
 	}
 	for row.Next() {
-		var userMetaSmallRaw struct {
-			Id          []byte
-			Username    string
-			Displayname sql.NullString
-			Image       string
-		}
+		var userMetaSmallRaw UserMetadatSmallRaw
 		err := row.StructScan(&userMetaSmallRaw)
 		if err != nil {
 			log.Error(err)
@@ -240,14 +242,23 @@ func (db *Database) GetFollowedNovel(
 	filtersAndSort *model.FiltersAndSortNovel,
 ) []model.NovelMetadataSmall {
 	var novels []model.NovelMetadataSmall
-	filtersAndSortString, filtersAndSortArgs := filtersAndSort.ConstructQuery()
-	// ERROR: Add tags
+	filtersAndSortQuery, filtersAndSortArgs := filtersAndSort.ConstructQuery()
 	query := `
 		SELECT novels.* 
-		FROM follows_novel LEFT JOIN novels 
-		ON follows_novel.novel_id = novels.id 
-		WHERE user_id = ? AND visibility = ?
-    ` + filtersAndSortString
+		FROM follows_novel 
+		LEFT JOIN novels 
+		ON follows_novel.novel_id = novels.id
+	`
+	if len(filtersAndSort.Tag) != 0 || len(filtersAndSort.TagExclude) != 0 {
+		query += `
+		RIGHT JOIN (
+			SELECT novel_id, GROUP_CONCAT(tag_id) AS tag_groupconcat
+			FROM novel_tags
+			GROUP BY novel_id
+		) AS TABLE1
+		ON TABLE1.novel_id = novels.id`
+	}
+	query += ` WHERE follows_novel.user_id = ? AND novels.visibility = ?` + filtersAndSortQuery
 
 	args := []interface{}{userID, model.VisibilityPublic}
 	if filtersAndSortArgs != nil {
@@ -279,7 +290,7 @@ func (db *Database) GetFollowedNovel(
 			log.Error(err)
 			return novels
 		}
-		authorMetadataSmall, ok := db.GetUserMetadataSmall(userID)
+		authorMetadataSmall, ok := db.GetUserMetadataSmall(novel.Author)
 		if !ok {
 			return novels
 		}
@@ -300,4 +311,41 @@ func (db *Database) GetFollowedNovel(
 		})
 	}
 	return novels
+}
+
+func (db *Database) FindUsers(username string, page uint) []model.UserMetadataSmall {
+	var usersMetadataSmall []model.UserMetadataSmall
+	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
+	rows, err := db.db.QueryxContext(
+		ctx,
+		`SELECT id, username, displayname, image FROM users WHERE username LIKE ? ORDER BY username LIMIT ? OFFSET ?`,
+		username,
+		model.PageSize,
+		model.PageSize*(page-1),
+	)
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Error(err)
+		}
+		cancel()
+	}()
+	if err != nil {
+		log.Error(err)
+		return usersMetadataSmall
+	}
+	for rows.Next() {
+		var raw UserMetadatSmallRaw
+		if err := rows.StructScan(&raw); err != nil {
+			log.Error(err)
+			return usersMetadataSmall
+		}
+		usersMetadataSmall = append(usersMetadataSmall, model.UserMetadataSmall{
+			ID:          hex.EncodeToString(raw.Id),
+			Username:    raw.Username,
+			Displayname: raw.Displayname.String,
+			Image:       raw.Image,
+		})
+	}
+
+	return usersMetadataSmall
 }

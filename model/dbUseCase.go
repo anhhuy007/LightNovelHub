@@ -5,15 +5,16 @@ type DB interface {
 	GetSession(sessionID []byte) (Session, bool)
 	DeleteSession(sessionID []byte) bool
 	DeleteExpiredSessions() bool
-	DeletaAllSessions(userID []byte) bool
+	DeleteAllSessions(userID []byte) bool
 	ExtendSessionLifetime(sessionID []byte) bool
 
 	CreateUser(username string, password []byte) ([]byte, bool)
 	GetUser(username string) (User, bool)
 	GetUserView(username string) (UserView, bool)
-	GetUserViewWithID(userID []byte) (UserView, bool)
-	GetUserWithID(userID []byte) (User, bool)
+	GetUserViewByID(userID []byte) (UserView, bool)
+	GetUserByID(userID []byte) (User, bool)
 	GetUserMetadataSmall(userID []byte) (UserMetadataSmall, bool)
+	FindUsers(username string, page uint) []UserMetadataSmall
 	DeleteUser(userID []byte) bool
 	UpdateUserMetadata(userID []byte, args *UserMetadata) bool
 	UpdateUserPassword(userID []byte, newPassword []byte) bool
@@ -23,7 +24,7 @@ type DB interface {
 
 	CreateNovel(args *NovelMetadata) ([]byte, bool)
 	GetNovelView(novelID []byte) (NovelView, bool)
-	GetNovel(novelID []byte) (Novel, bool)
+	FindNovels(filtersAndSort *FiltersAndSortNovel) []NovelMetadataSmall
 	UpdateNovelMetadata(novelID []byte, args *NovelMetadata) bool
 	GetUsersNovels(
 		userID []byte,

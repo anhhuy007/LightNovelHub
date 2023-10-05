@@ -76,25 +76,39 @@ func parseIntArray(nums string) []int {
 	return res
 }
 
+const (
+	QueryPage       = "page"
+	QueryOrderBy    = "orderBy"
+	QuerySortOrder  = "sortOrder"
+	QueryAdult      = "adult"
+	QueryLanguage   = "language"
+	QueryTag        = "tag"
+	QueryTagExclude = "tagExclude"
+	QuerySearch     = "search"
+	QueryFromDate   = "from"
+	QueryToDate     = "to"
+	QueryStatus     = "status"
+)
+
 func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSortNovel {
-	fromDate, err := time.Parse(time.DateOnly, c.Query("from", ""))
+	fromDate, err := time.Parse(time.DateOnly, c.Query(QueryFromDate, ""))
 	if err != nil {
 		fromDate = model.DefaultFiltersAndSort.FromDate
 	}
-	toDate, err := time.Parse(time.DateOnly, c.Query("to", ""))
+	toDate, err := time.Parse(time.DateOnly, c.Query(QueryToDate, ""))
 	if err != nil {
 		toDate = model.DefaultFiltersAndSort.ToDate
 	}
-	pageQuery := c.QueryInt("page", 1)
+	pageQuery := c.QueryInt(QueryPage, 1)
 	page := model.DefaultFiltersAndSort.Page
 	if pageQuery > 1 {
 		page = uint(pageQuery)
 	}
-	orderBy := model.OrderBy(c.Query("orderBy", ""))
+	orderBy := model.OrderBy(c.Query(QueryOrderBy, ""))
 	if !orderBy.Validate() {
 		orderBy = model.DefaultFiltersAndSort.OrderBy
 	}
-	sortOrder := model.SortOrder(c.Query("sortOrder", ""))
+	sortOrder := model.SortOrder(c.Query(QuerySortOrder, ""))
 	if !sortOrder.Validate() {
 		sortOrder = model.DefaultFiltersAndSort.SortOrder
 	}
@@ -102,16 +116,16 @@ func getFiltersAndSort(c *fiber.Ctx) model.FiltersAndSortNovel {
 	return model.FiltersAndSortNovel{
 		SortOrder:  sortOrder,
 		OrderBy:    orderBy,
-		Adult:      c.QueryBool("adult", model.DefaultFiltersAndSort.Adult),
-		Language:   c.Query("language", model.DefaultFiltersAndSort.Language),
-		Tag:        parseIntArray(c.Query("tag", "")),
-		TagExclude: parseIntArray(c.Query("tagExclude", "")),
-		Search:     c.Query("search", model.DefaultFiltersAndSort.Search),
+		Adult:      c.QueryBool(QueryAdult, model.DefaultFiltersAndSort.Adult),
+		Language:   c.Query(QueryLanguage, model.DefaultFiltersAndSort.Language),
+		Tag:        parseIntArray(c.Query(QueryTag, "")),
+		TagExclude: parseIntArray(c.Query(QueryTagExclude, "")),
+		Search:     c.Query(QuerySearch, model.DefaultFiltersAndSort.Search),
 		Page:       page,
 		FromDate:   fromDate,
 		ToDate:     toDate,
 		Status: model.NovelStatusID(
-			c.QueryInt("status", int(model.DefaultFiltersAndSort.Status)),
+			c.QueryInt(QueryStatus, int(model.DefaultFiltersAndSort.Status)),
 		),
 	}
 }

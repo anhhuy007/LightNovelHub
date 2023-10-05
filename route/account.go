@@ -15,7 +15,9 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 	accountRoute := (*router).Group("/accounts")
 
 	accountRoute.Get("/:username", getUserView(db))
-	//accountRoute.Get("/find/:username", searchByUsername(db))
+	accountRoute.Delete("/:username", deleteUser(db))
+
+	accountRoute.Get("/find/:username", searchByUsername(db))
 
 	accountRoute.Post("/register", register(db))
 	accountRoute.Post("/login", login(db))
@@ -28,7 +30,6 @@ func AddAccountRoutes(router *fiber.Router, db model.DB) {
 
 	accountRoute.Patch("/update", updateUser(db))
 
-	accountRoute.Delete("/:username", deleteUser(db))
 }
 
 // Login
@@ -227,7 +228,7 @@ func deleteUser(db model.DB) fiber.Handler {
 		//	return c.Status(fiber.StatusBadRequest).JSON(buildErrorJSON(WrongPassword))
 		//}
 		//
-		//db.DeletaAllSessions(user.ID)
+		//db.DeleteAllSessions(user.ID)
 		//ok = db.DeleteUser(user.ID)
 		//if !ok {
 		//	return c.SendStatus(fiber.StatusInternalServerError)
@@ -354,7 +355,7 @@ func changeUserPassword(db model.DB) fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		user, ok := db.GetUserWithID(session.UserID)
+		user, ok := db.GetUserByID(session.UserID)
 		if !ok {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -393,7 +394,7 @@ func getUserViewFromSession(db model.DB) fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-		UserView, ok := db.GetUserViewWithID(session.UserID)
+		UserView, ok := db.GetUserViewByID(session.UserID)
 		if !ok {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -434,7 +435,7 @@ func getFollowedUser(db model.DB) fiber.Handler {
 //	@Accept		json
 //	@Produce	json
 //	@Param		sessionString	body		model.IncludeSessionString	true	"User's Session"
-//	@Param		filtersAndSort	query		model.FiltersAndSortNovel		false	"Filters and sorting options"
+//	@Param		filtersAndSort	query		model.FiltersAndSortNovel	false	"Filters and sorting options"
 //	@Success	200				{object}	[]model.NovelMetadataSmall
 //	@Failure	401
 //	@Failure	500
@@ -451,6 +452,33 @@ func getFollowedNovel(db model.DB) fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 		return c.JSON(db.GetFollowedNovel(session.UserID, &filtersAndSort))
+	}
+}
+
+// Search User by Username
+//
+//	@Summary	Search user by username
+//	@Tags		accounts
+//	@Produce	json
+//	@Param		username	path		string	true	"Username"
+//	@Param		page		query		uint	false	"Page"
+//	@Success	200			{object}	[]model.UserMetadataSmall
+//	@Failure	404
+//	@Failure	500
+//	@Router		/accounts/find/:username [GET]
+func searchByUsername(db model.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		username := c.Params("username")
+		page := c.QueryInt(QueryPage, 1)
+		pageUint := uint(page)
+		if page < 1 {
+			pageUint = 1
+		}
+		if !IsUsernameValid(username) {
+			return c.SendStatus(fiber.StatusNotFound)
+		}
+		users := db.FindUsers(username, pageUint)
+		return c.JSON(users)
 	}
 }
 

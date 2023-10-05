@@ -179,15 +179,25 @@ func (db *Database) GetUsersNovels(
 	isSelf bool,
 ) []model.NovelMetadataSmall {
 	var novels []model.NovelMetadataSmall
-	filtersAndSortString, filtersAndSortArgs := filtersAndSort.ConstructQuery()
-	// ERROR: Add tag
+	filtersAndSortQuery, filtersAndSortArgs := filtersAndSort.ConstructQuery()
 	query := `
 		SELECT novels.* 
-		FROM novels WHERE author = ?`
-	if isSelf == false {
-		query += fmt.Sprintf(" AND visibility = %v", model.VisibilityPublic)
+		FROM novels
+	`
+	if len(filtersAndSort.Tag) != 0 || len(filtersAndSort.TagExclude) != 0 {
+		query += `
+		RIGHT JOIN (
+			SELECT novel_id, GROUP_CONCAT(tag_id) AS tag_groupconcat
+			FROM novel_tags
+			GROUP BY novel_id
+		) AS TABLE1
+		ON TABLE1.novel_id = novels.id`
 	}
-	query += filtersAndSortString
+	query += ` WHERE novels.author = ?`
+	if isSelf == false {
+		query += fmt.Sprintf(" AND novels.visibility = %v", int(model.VisibilityPublic))
+	}
+	query += filtersAndSortQuery
 
 	args := []interface{}{userID}
 	if filtersAndSortArgs != nil {
@@ -218,7 +228,75 @@ func (db *Database) GetUsersNovels(
 			log.Error(err)
 			return novels
 		}
-		authorMetadataSmall, ok := db.GetUserMetadataSmall(userID)
+		authorMetadataSmall, ok := db.GetUserMetadataSmall(novel.Author)
+		if !ok {
+			return novels
+		}
+		novels = append(novels, model.NovelMetadataSmall{
+			ID:          hex.EncodeToString(novel.ID),
+			Title:       novel.Title,
+			Tagline:     novel.Tagline,
+			Description: novel.Description,
+			Author:      authorMetadataSmall,
+			Image:       novel.Image,
+			Language:    novel.Language,
+			TotalRating: novel.TotalRating,
+			RateCount:   novel.RateCount,
+			Adult:       novel.Adult,
+			Status:      novel.Status.String(),
+			Visibility:  novel.Visibility.String(),
+			Views:       novel.Views,
+		})
+	}
+	return novels
+}
+
+func (db *Database) FindNovels(
+	filtersAndSort *model.FiltersAndSortNovel,
+) []model.NovelMetadataSmall {
+	var novels []model.NovelMetadataSmall
+	filtersAndSortQuery, filtersAndSortArgs := filtersAndSort.ConstructQuery()
+	query := `
+		SELECT novels.* 
+		FROM novels
+	`
+	if len(filtersAndSort.Tag) != 0 || len(filtersAndSort.TagExclude) != 0 {
+		query += `
+		RIGHT JOIN (
+			SELECT novel_id, GROUP_CONCAT(tag_id) AS tag_groupconcat
+			FROM novel_tags
+			GROUP BY novel_id
+		) AS TABLE1
+		ON TABLE1.novel_id = novels.id`
+	}
+	query += " WHERE 1=1 "
+	query += filtersAndSortQuery
+
+	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
+	row, err := db.db.QueryxContext(
+		ctx,
+		query,
+		filtersAndSortArgs...,
+	)
+	defer func() {
+		err := row.Close()
+		if err != nil {
+			log.Error(err)
+		}
+		cancel()
+	}()
+	if err != nil {
+		log.Error(err)
+		return novels
+	}
+	for row.Next() {
+		var novel model.Novel
+		err := row.StructScan(&novel)
+		if err != nil {
+			log.Error(err)
+			return novels
+		}
+		authorMetadataSmall, ok := db.GetUserMetadataSmall(novel.Author)
 		if !ok {
 			return novels
 		}

@@ -15,11 +15,11 @@ import (
 func AddUploadRoutes(router *fiber.Router, db model.DB) {
 	novelRoute := (*router).Group("/novel")
 
-	//novelRoute.Get("/find", searchAndFilterNovel(db))
+	novelRoute.Get("/find", searchAndFilterNovel(db))
 
 	novelRoute.Post("/create", createNovel(db))
+	novelRoute.Post("/from/:username", getUsersNovels(db))
 	novelRoute.Post("/:novelID", getNovel(db))
-	novelRoute.Post("/from/:username", getUsersNovels(db)) //TODO: Add sort and pagination
 
 	novelRoute.Patch("/:novelID", updateNovelMetadata(db))
 
@@ -41,7 +41,6 @@ func AddUploadRoutes(router *fiber.Router, db model.DB) {
 func getNovel(db model.DB) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		novelIDStr := c.Params("novelID")
-		log.Debug(novelIDStr)
 		if len(novelIDStr) != model.IDHexLength {
 			return c.SendStatus(fiber.StatusNotFound)
 		}
@@ -193,9 +192,9 @@ func updateNovelMetadata(db model.DB) fiber.Handler {
 //	@Description	If the user is not logged in, only the public novels will be returned
 //	@Tags			novel
 //	@Produce		json
-//	@Param			username			path		string						true	"username"
+//	@Param			username		path		string						true	"username"
 //	@Param			sessionString	body		model.IncludeSessionString	true	"User's Session"
-//	@Param			filtersAndSort	query		model.FiltersAndSortNovel		false	"Filters and sorting options"
+//	@Param			filtersAndSort	query		model.FiltersAndSortNovel	false	"Filters and sorting options"
 //	@Success		200				{object}	[]model.NovelMetadataSmall
 //	@Failure		401
 //	@Failure		404
@@ -221,6 +220,24 @@ func getUsersNovels(db model.DB) fiber.Handler {
 
 		novelsMetadataSmall := db.GetUsersNovels(user.ID, &filtersAndSort, isSelf)
 		return c.JSON(novelsMetadataSmall)
+	}
+}
+
+// Search and Filter Novels
+//
+//	@Summary	Search and filter novels with the provided filters and sorting options, if no filters and sorting options are provided, all the public novels will be returned
+//	@Tags		novel
+//	@Produce	json
+//	@Param		filtersAndSort	query		model.FiltersAndSortNovel	false	"Filters and sorting options"
+//	@Success	200				{object}	[]model.NovelMetadataSmall
+//	@Failure	500
+//	@Router		/novel/find [GET]
+func searchAndFilterNovel(db model.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		filtersAndSortOption := getFiltersAndSort(c)
+
+		novels := db.FindNovels(&filtersAndSortOption)
+		return c.JSON(novels)
 	}
 }
 

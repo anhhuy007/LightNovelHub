@@ -334,6 +334,34 @@ paths:
       summary: Delete user's account and all other data
       tags:
       - accounts
+  /accounts/find/:username:
+    get:
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      - description: Page
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.UserMetadataSmall'
+            type: array
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Search user by username
+      tags:
+      - accounts
   /accounts/followed/novels:
     post:
       consumes:
@@ -739,6 +767,88 @@ paths:
           description: Internal Server Error
       summary: Create a new novel with the provided metadata, return the created novel
         id
+      tags:
+      - novel
+  /novel/find:
+    get:
+      parameters:
+      - in: query
+        name: adult
+        type: boolean
+      - in: query
+        name: fromDate
+        type: string
+      - in: query
+        name: language
+        type: string
+      - enum:
+        - created_at
+        - updated_at
+        - views
+        - title
+        in: query
+        name: orderBy
+        type: string
+        x-enum-varnames:
+        - OrderByCreatedAt
+        - OrderByUpdateAt
+        - OrderByViews
+        - OrderByTitle
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: search
+        type: string
+      - enum:
+        - ASC
+        - DESC
+        in: query
+        name: sortOrder
+        type: string
+        x-enum-varnames:
+        - SortOrderAsc
+        - SortOrderDesc
+      - enum:
+        - 1
+        - 2
+        - 3
+        in: query
+        name: status
+        type: integer
+        x-enum-varnames:
+        - StatusOngoing
+        - StatusCompleted
+        - StatusDropped
+      - collectionFormat: csv
+        in: query
+        items:
+          type: integer
+        name: tag
+        type: array
+      - collectionFormat: csv
+        in: query
+        items:
+          type: integer
+        name: tagExclude
+        type: array
+      - in: query
+        name: toDate
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.NovelMetadataSmall'
+            type: array
+        "500":
+          description: Internal Server Error
+      summary: Search and filter novels with the provided filters and sorting options,
+        if no filters and sorting options are provided, all the public novels will
+        be returned
       tags:
       - novel
   /novel/from/:username:

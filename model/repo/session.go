@@ -101,7 +101,7 @@ func (db *Database) ExtendSessionLifetime(sessionID []byte) bool {
 	return true
 }
 
-func (db *Database) DeletaAllSessions(userID []byte) bool {
+func (db *Database) DeleteAllSessions(userID []byte) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), db.timeoutDuration)
 	_, err := db.db.ExecContext(ctx, "DELETE FROM sessions WHERE user_id = ?", userID)
 	cancel()
